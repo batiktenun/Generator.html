@@ -1,274 +1,242 @@
 <!doctype html>
-
 <html lang="id">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Mockup Generator - Baju + Motif</title>
-  <style>
-    :root{--accent:#0b66ff}
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto;display:flex;gap:20px;padding:20px;background:#f6f7fb;color:#0b0b0b}
-    .panel{width:360px;background:#fff;border-radius:12px;box-shadow:0 6px 18px rgba(20,20,40,.08);padding:16px}
-    .preview{flex:1;display:flex;align-items:center;justify-content:center}
-    canvas{background:#fff;border-radius:8px;box-shadow:0 6px 18px rgba(20,20,40,.06);max-width:100%;height:auto}
-    label{display:block;font-size:13px;margin-top:12px;color:#444}
-    input[type=file]{display:block;margin-top:6px}
-    .row{display:flex;gap:8px;align-items:center}
-    .controls{display:grid;grid-template-columns:1fr 64px;gap:8px;align-items:center}
-    input[type=range]{width:100%}
-    button{background:var(--accent);color:#fff;border:0;padding:10px 12px;border-radius:8px;cursor:pointer}
-    small{color:#666}
-    .muted{color:#777;font-size:13px}
-    footer{font-size:12px;color:#666;margin-top:14px;text-align:center}
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Mockup Generator - Displacement FIXED</title>
+<style>
+body{
+  font-family:system-ui;
+  display:flex;
+  gap:20px;
+  padding:20px;
+  background:#f6f7fb;
+}
+
+.panel{
+  width:360px;
+  background:white;
+  padding:16px;
+  border-radius:12px;
+  box-shadow:0 6px 18px rgba(0,0,0,0.08);
+}
+
+.preview-wrap{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+.preview{
+  background:white;
+  padding:12px;
+  border-radius:12px;
+  display:flex;
+  justify-content:center;
+}
+
+canvas{
+  max-width:100%;
+  background:white;
+  border-radius:8px;
+  box-shadow:0 6px 18px rgba(0,0,0,0.06);
+}
+
+label{
+  margin-top:12px;
+  display:block;
+  font-size:14px;
+}
+
+.row{
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+
+button{
+  padding:10px 14px;
+  border-radius:8px;
+  border:0;
+  background:#0b66ff;
+  color:white;
+  cursor:pointer;
+}
+</style>
 </head>
 <body>
-  <div class="panel">
-    <h3>Mockup Generator</h3>
-    <p class="muted">Upload foto baju (mis. baju polos) dan desain motif. Atur posisi, scale, rotasi, opacity lalu unduh.</p><label>1) Foto baju (background)</label>
-<input id="shirtFile" type="file" accept="image/*">
 
-<label>2) Gambar motif (overlay)</label>
-<input id="patternFile" type="file" accept="image/*">
+<div class="panel">
+  <h3>Mockup Generator (Fixed Displacement)</h3>
 
-<label>3) Pengaturan motif</label>
-<div style="display:grid;gap:8px">
-  <div class="row">
-    <span style="width:72px">Posisi X</span>
-    <input id="posX" type="range" min="-1000" max="1000" value="0">
-  </div>
-  <div class="row">
-    <span style="width:72px">Posisi Y</span>
-    <input id="posY" type="range" min="-1000" max="1000" value="0">
-  </div>
-  <div class="row">
-    <span style="width:72px">Scale</span>
-    <input id="scale" type="range" min="0.1" max="5" step="0.01" value="1">
-  </div>
-  <div class="row">
-    <span style="width:72px">Rotasi</span>
-    <input id="rotation" type="range" min="-180" max="180" value="0">
-  </div>
-  <div class="row">
-    <span style="width:72px">Opacity</span>
-    <input id="opacity" type="range" min="0" max="1" step="0.01" value="1">
-  </div>
-  <div class="row">
-    <button id="centerBtn" style="flex:1">Center</button>
-    <button id="tileBtn" style="width:96px">Toggle Tile</button>
-  </div>
-</div>
+  <label>Upload Foto Baju</label>
+  <input id="shirtFile" type="file" accept="image/*">
 
-<label>4) Aksi</label>
-<div style="display:flex;gap:8px">
+  <label>Upload Motif</label>
+  <input id="patternFile" type="file" accept="image/*">
+
+  <label>Displacement Strength</label>
+  <input id="strength" type="range" min="0" max="100" value="20">
+
+  <label>Opacity Motif</label>
+  <input id="opacity" type="range" min="0" max="1" step="0.01" value="1">
+
   <button id="downloadBtn">Download PNG</button>
-  <button id="resetBtn" style="background:#eee;color:#111">Reset</button>
 </div>
 
-<footer>File siap pakai — copy file ini ke repo GitHub & buka index.html</footer>
+<div class="preview-wrap">
+  <div class="preview">
+    <canvas id="canvas" width="900" height="1100"></canvas>
+  </div>
+  <img id="preview" style="width:200px;border:1px solid #ddd;border-radius:8px;background:white">
+</div>
 
-  </div>  <div class="preview">
-    <canvas id="c" width="900" height="1100"></canvas>
-  </div><script>
-// Simple mockup generator (single-file, client-side). Works on desktop & mobile.
-const canvas = document.getElementById('c');
-const ctx = canvas.getContext('2d', {alpha:true});
-let shirtImg = null; // background
-let patternImg = null; // overlay
-let patternState = {x: canvas.width/2, y: canvas.height/2, scale:1, rot:0, alpha:1, tiled:false};
-let dragging=false, dragOffset={x:0,y:0};
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
 
-// UI refs
-const shirtFile = document.getElementById('shirtFile');
-const patternFile = document.getElementById('patternFile');
-const posX = document.getElementById('posX');
-const posY = document.getElementById('posY');
-const scaleEl = document.getElementById('scale');
-const rotationEl = document.getElementById('rotation');
-const opacityEl = document.getElementById('opacity');
-const downloadBtn = document.getElementById('downloadBtn');
-const resetBtn = document.getElementById('resetBtn');
-const centerBtn = document.getElementById('centerBtn');
-const tileBtn = document.getElementById('tileBtn');
+let shirtImg = null;
+let patternImg = null;
+let lumMap = null;
 
-function loadImageFromFile(file, cb){
-  const reader = new FileReader();
-  reader.onload = e => {
-    const img = new Image();
-    img.onload = () => cb(img);
-    img.src = e.target.result;
-  };
-  reader.readAsDataURL(file);
-}
+// ====== LOAD FILES ======
 
-shirtFile.addEventListener('change', e=>{
-  const f = e.target.files[0]; if(!f) return;
-  loadImageFromFile(f, img=>{ shirtImg = img; fitCanvasToShirt(); draw(); });
-});
-patternFile.addEventListener('change', e=>{
-  const f = e.target.files[0]; if(!f) return;
-  loadImageFromFile(f, img=>{ patternImg = img; // reset position to center
-    patternState.x = canvas.width/2; patternState.y = canvas.height/2; patternState.scale = 1; patternState.rot = 0; patternState.alpha=1; patternState.tiled=false;
-    syncUI(); draw();
-  });
-});
-
-// Canvas size adapts to shirt image natural aspect ratio but constrained for speed
-function fitCanvasToShirt(){
-  if(!shirtImg) return;
-  const maxW = 1200; // keep reasonably sized
-  const maxH = 1500;
-  let w = shirtImg.naturalWidth || shirtImg.width;
-  let h = shirtImg.naturalHeight || shirtImg.height;
-  const ratio = Math.min(maxW / w, maxH / h, 1);
-  canvas.width = Math.round(w * ratio);
-  canvas.height = Math.round(h * ratio);
-  // if pattern had previous coordinates, keep them proportional
-  patternState.x = canvas.width/2;
-  patternState.y = canvas.height/2;
-}
-
-function syncUI(){
-  posX.value = Math.round(patternState.x);
-  posY.value = Math.round(patternState.y);
-  scaleEl.value = patternState.scale;
-  rotationEl.value = patternState.rot;
-  opacityEl.value = patternState.alpha;
-}
-
-// Draw loop
-function draw(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  // draw shirt background (fit to canvas)
-  if(shirtImg) {
-    ctx.drawImage(shirtImg, 0, 0, canvas.width, canvas.height);
-  } else {
-    // placeholder: white shirt rectangle
-    ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,canvas.width,canvas.height);
-  }
-
-  if(!patternImg) return;
-  ctx.save();
-  ctx.globalAlpha = patternState.alpha;
-  // translate to position
-  ctx.translate(patternState.x, patternState.y);
-  ctx.rotate(patternState.rot * Math.PI/180);
-  ctx.scale(patternState.scale, patternState.scale);
-
-  if(patternState.tiled){
-    // create pattern and fill a rectangle roughly as big as canvas
-    const pattern = ctx.createPattern(patternImg, 'repeat');
-    ctx.fillStyle = pattern;
-    // draw a large rect centered at 0,0 in transformed space
-    const fillW = canvas.width * (1/patternState.scale) + 500;
-    const fillH = canvas.height * (1/patternState.scale) + 500;
-    ctx.fillRect(-fillW/2, -fillH/2, fillW, fillH);
-  } else {
-    // draw single motif centered at 0,0
-    const w = patternImg.naturalWidth || patternImg.width;
-    const h = patternImg.naturalHeight || patternImg.height;
-    // scale motif to max 60% of canvas width by default (unless user changes scale)
-    const defaultScale = Math.min((canvas.width * 0.6) / w, (canvas.height * 0.6) / h);
-    // note: user scale multiplies defaultScale
-    const drawW = w * defaultScale;
-    const drawH = h * defaultScale;
-    ctx.drawImage(patternImg, -drawW/2, -drawH/2, drawW, drawH);
-  }
-  ctx.restore();
-}
-
-// UI events -> state
-[posX,posY,scaleEl,rotationEl,opacityEl].forEach(el=>{
-  el.addEventListener('input', ()=>{
-    patternState.x = Number(posX.value);
-    patternState.y = Number(posY.value);
-    patternState.scale = Number(scaleEl.value);
-    patternState.rot = Number(rotationEl.value);
-    patternState.alpha = Number(opacityEl.value);
+document.getElementById('shirtFile').addEventListener('change', e=>{
+  loadFile(e.target.files[0], img=>{
+    shirtImg = img;
+    computeLumMap();
     draw();
   });
 });
 
-centerBtn.addEventListener('click', ()=>{ patternState.x = canvas.width/2; patternState.y = canvas.height/2; syncUI(); draw(); });
-
-tileBtn.addEventListener('click', ()=>{ patternState.tiled = !patternState.tiled; tileBtn.textContent = patternState.tiled ? 'Tile: ON' : 'Toggle Tile'; draw(); });
-
-resetBtn.addEventListener('click', ()=>{
-  shirtImg = null; patternImg = null; patternState = {x: canvas.width/2, y: canvas.height/2, scale:1, rot:0, alpha:1, tiled:false};
-  shirtFile.value = '';
-  patternFile.value = '';
-  fitCanvasToShirt(); syncUI(); draw();
+document.getElementById('patternFile').addEventListener('change', e=>{
+  loadFile(e.target.files[0], img=>{
+    patternImg = img;
+    draw();
+  });
 });
 
-// download
-downloadBtn.addEventListener('click', ()=>{
-  // draw final at devicePixelRatio for better quality
-  const scaleFactor = 2; // increase for higher-res download
-  const tmp = document.createElement('canvas');
-  tmp.width = canvas.width * scaleFactor;
-  tmp.height = canvas.height * scaleFactor;
-  const tctx = tmp.getContext('2d');
-  // draw shirt
-  if(shirtImg) tctx.drawImage(shirtImg, 0, 0, tmp.width, tmp.height);
-  else { tctx.fillStyle='#fff'; tctx.fillRect(0,0,tmp.width,tmp.height); }
+document.getElementById('strength').addEventListener('input', draw);
+document.getElementById('opacity').addEventListener('input', draw);
 
-  if(patternImg){
-    tctx.save();
-    tctx.globalAlpha = patternState.alpha;
-    tctx.translate(patternState.x*scaleFactor, patternState.y*scaleFactor);
-    tctx.rotate(patternState.rot*Math.PI/180);
-    tctx.scale(patternState.scale, patternState.scale);
-    if(patternState.tiled){
-      const patt = tctx.createPattern(patternImg, 'repeat');
-      tctx.fillStyle = patt;
-      const fillW = tmp.width * (1/patternState.scale) + 1000;
-      const fillH = tmp.height * (1/patternState.scale) + 1000;
-      tctx.fillRect(-fillW/2, -fillH/2, fillW, fillH);
-    } else {
-      const w = patternImg.naturalWidth || patternImg.width;
-      const h = patternImg.naturalHeight || patternImg.height;
-      const defaultScale = Math.min((tmp.width * 0.6) / (w*scaleFactor), (tmp.height * 0.6) / (h*scaleFactor));
-      const drawW = w * (defaultScale*scaleFactor);
-      const drawH = h * (defaultScale*scaleFactor);
-      tctx.drawImage(patternImg, -drawW/2, -drawH/2, drawW, drawH);
-    }
-    tctx.restore();
+function loadFile(file, cb){
+  const r = new FileReader();
+  r.onload = e=>{
+    const img = new Image();
+    img.onload = ()=>cb(img);
+    img.src = e.target.result;
+  };
+  r.readAsDataURL(file);
+}
+
+// ====== LUMINANCE MAP ======
+
+function computeLumMap(){
+  if(!shirtImg) return;
+  const w = canvas.width, h = canvas.height;
+
+  const t = document.createElement('canvas');
+  t.width = w; t.height = h;
+
+  const tctx = t.getContext('2d');
+  tctx.drawImage(shirtImg, 0, 0, w, h);
+
+  const data = tctx.getImageData(0, 0, w, h).data;
+  lumMap = new Float32Array(w*h);
+
+  for(let i=0, j=0; i<data.length; i+=4, j++){
+    lumMap[j] = (0.2126*data[i] + 0.7152*data[i+1] + 0.0722*data[i+2]) / 255;
+  }
+}
+
+// ====== MAIN DRAW ======
+
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  if(shirtImg){
+    ctx.drawImage(shirtImg,0,0,canvas.width,canvas.height);
   }
 
+  if(!patternImg) return;
+
+  // STEP 1: Render motif ke patternCanvas
+  const pw = canvas.width, ph = canvas.height;
+  const pCan = document.createElement('canvas');
+  pCan.width = pw;
+  pCan.height = ph;
+  const pctx = pCan.getContext('2d');
+
+  // Motif ditaruh di tengah area baju
+  pctx.drawImage(patternImg, pw*0.2, ph*0.2, pw*0.6, ph*0.6);
+
+  // STEP 2: Displacement → di canvas terpisah
+  const displaced = document.createElement('canvas');
+  displaced.width = pw;
+  displaced.height = ph;
+  const dctx = displaced.getContext('2d');
+
+  if(lumMap){
+    const strength = Number(document.getElementById('strength').value);
+    const pData = pctx.getImageData(0,0,pw,ph).data;
+
+    const out = dctx.createImageData(pw,ph);
+    const outData = out.data;
+
+    for(let y=0; y<ph; y++){
+      for(let x=0; x<pw; x++){
+        const i = y*pw + x;
+        const lum = lumMap[i];
+
+        // displacement offset
+        const dx = (lum - 0.5) * strength;
+        const dy = (lum - 0.5) * strength;
+
+        let sx = Math.round(x + dx);
+        let sy = Math.round(y + dy);
+
+        // clamp
+        if(sx<0) sx=0;
+        if(sx>=pw) sx=pw-1;
+        if(sy<0) sy=0;
+        if(sy>=ph) sy=ph-1;
+
+        const si = (sy*pw + sx)*4;
+        const oi = i*4;
+
+        outData[oi]   = pData[si];
+        outData[oi+1] = pData[si+1];
+        outData[oi+2] = pData[si+2];
+        outData[oi+3] = pData[si+3];
+      }
+    }
+
+    dctx.putImageData(out,0,0);
+  } else {
+    dctx.drawImage(pCan,0,0);
+  }
+
+  // STEP 3: Blend motif displaced ke atas baju
+  ctx.globalAlpha = Number(document.getElementById('opacity').value);
+  ctx.globalCompositeOperation = "multiply"; // efek kain
+  ctx.drawImage(displaced, 0, 0);
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = "source-over";
+
+  // Update preview kecil
+  document.getElementById('preview').src = canvas.toDataURL();
+}
+
+// ====== DOWNLOAD ======
+
+document.getElementById('downloadBtn').addEventListener('click', ()=>{
   const link = document.createElement('a');
-  link.download = 'mockup.png';
-  link.href = tmp.toDataURL('image/png');
+  link.download = "mockup.png";
+  link.href = canvas.toDataURL("image/png");
   link.click();
 });
+</script>
 
-// Basic pointer drag to move motif
-canvas.addEventListener('pointerdown', e=>{
-  if(!patternImg) return;
-  const rect = canvas.getBoundingClientRect();
-  const x = (e.clientX - rect.left);
-  const y = (e.clientY - rect.top);
-  // simple hit test: check distance to pattern center (approx using default draw size)
-  const w = (patternImg.naturalWidth||patternImg.width) * (patternState.scale) * Math.min((canvas.width*0.6)/(patternImg.naturalWidth||patternImg.width),(canvas.height*0.6)/(patternImg.naturalHeight||patternImg.height));
-  const h = (patternImg.naturalHeight||patternImg.height) * (patternState.scale) * Math.min((canvas.width*0.6)/(patternImg.naturalWidth||patternImg.width),(canvas.height*0.6)/(patternImg.naturalHeight||patternImg.height));
-  const dx = x - patternState.x; const dy = y - patternState.y;
-  if(Math.abs(dx) <= w/2 + 20 && Math.abs(dy) <= h/2 + 20){
-    dragging = true; dragOffset.x = dx; dragOffset.y = dy; canvas.setPointerCapture(e.pointerId);
-  }
-});
-canvas.addEventListener('pointermove', e=>{
-  if(!dragging) return;
-  const rect = canvas.getBoundingClientRect();
-  const x = (e.clientX - rect.left);
-  const y = (e.clientY - rect.top);
-  patternState.x = x - dragOffset.x; patternState.y = y - dragOffset.y;
-  syncUI(); draw();
-});
-canvas.addEventListener('pointerup', e=>{ dragging=false; try{ canvas.releasePointerCapture(e.pointerId);}catch(e){} });
-canvas.addEventListener('pointercancel', ()=>{ dragging=false });
-
-// init
-fitCanvasToShirt(); syncUI(); draw();
-
-// small helpful tip: use high-resolution shirt photo for better download output
-</script></body>
+</body>
 </html>
