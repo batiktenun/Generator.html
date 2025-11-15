@@ -152,7 +152,7 @@ button{background:var(--accent);color:#fff;border:0;padding:8px 10px;border-radi
 </div>
 
 <script>
-// AI-Assisted Selection Brush dengan edge detection
+// AI-Assisted Selection Brush dengan edge detection - FIXED VERSION
 const c = document.getElementById('c');
 const ctx = c.getContext('2d');
 const selectionOverlay = document.getElementById('selectionOverlay');
@@ -178,8 +178,8 @@ let dragging = false;
 let dragOffset = {x:0,y:0};
 let lastPointerId = null;
 
-// Selection variables
-let currentSelection = [];
+// Selection variables - FIXED: menggunakan Set untuk performa lebih baik
+let currentSelection = new Set();
 
 // UI refs
 const shirtFile = document.getElementById('shirtFile');
@@ -368,8 +368,8 @@ resetEraseBtn.addEventListener('click', ()=>{ pushUndo(); eraseMaskCtx.clearRect
 eraserBtn.addEventListener('click', ()=>{ 
   eraserMode = !eraserMode; 
   selectionBrushMode = false;
-  eraserBtn.classList.toggle('tool-active', eraserMode);
-  selectionBrushBtn.classList.remove('tool-active');
+  eraserBtn.style.background = eraserMode ? '#111' : '#666'; 
+  selectionBrushBtn.style.background = '#666';
   eraserBtn.textContent = eraserMode ? 'Eraser' : 'Paint'; 
   clearSelection();
 });
@@ -378,136 +378,65 @@ eraserBtn.addEventListener('click', ()=>{
 selectionBrushBtn.addEventListener('click', ()=>{ 
   selectionBrushMode = !selectionBrushMode; 
   eraserMode = false;
-  selectionBrushBtn.classList.toggle('tool-active', selectionBrushMode);
-  eraserBtn.classList.remove('tool-active');
+  selectionBrushBtn.style.background = selectionBrushMode ? '#111' : '#666'; 
+  eraserBtn.style.background = '#666';
   if (!selectionBrushMode) {
     clearSelection();
   }
 });
 
-// Apply Selection button - AI-assisted edge detection
+// Apply Selection button - FIXED VERSION
 applySelectionBtn.addEventListener('click', function() {
-  if (currentSelection.length === 0) return;
+  console.log('Apply Selection clicked');
+  console.log('Current selection size:', currentSelection.size);
+  
+  if (currentSelection.size === 0) {
+    alert('Tidak ada area yang diseleksi! Gunakan Selection Brush terlebih dahulu.');
+    return;
+  }
+  
+  if (!shirtImg) {
+    alert('Silakan upload gambar baju terlebih dahulu!');
+    return;
+  }
   
   pushUndo();
   
-  // Get shirt image data for edge detection
-  const tmp = document.createElement('canvas');
-  tmp.width = c.width;
-  tmp.height = c.height;
-  const tctx = tmp.getContext('2d');
-  tctx.drawImage(shirtImg, 0, 0, tmp.width, tmp.height);
-  const imgData = tctx.getImageData(0, 0, tmp.width, tmp.height);
-  const data = imgData.data;
+  // Create selection canvas
+  const selectionCanvas = document.createElement('canvas');
+  selectionCanvas.width = c.width;
+  selectionCanvas.height = c.height;
+  const selectionCtx = selectionCanvas.getContext('2d');
   
-  // Create a canvas for the AI-expanded selection
-  const aiSelectionCanvas = document.createElement('canvas');
-  aiSelectionCanvas.width = c.width;
-  aiSelectionCanvas.height = c.height;
-  const aiCtx = aiSelectionCanvas.getContext('2d');
-  aiCtx.clearRect(0, 0, c.width, c.height);
+  // Fill selection with white
+  selectionCtx.fillStyle = 'white';
+  selectionCtx.fillRect(0, 0, selectionCanvas.width, selectionCanvas.height);
   
-  // Mark initial selection
-  aiCtx.fillStyle = 'white';
-  currentSelection.forEach(([x, y]) => {
-    aiCtx.fillRect(x, y, 1, 1);
+  // Apply the selection to erase mask
+  eraseMaskCtx.globalCompositeOperation = 'destination-out';
+  
+  // Draw each selected pixel
+  selectionCtx.fillStyle = 'black';
+  currentSelection.forEach(pixel => {
+    const [x, y] = pixel.split(',').map(Number);
+    selectionCtx.fillRect(x, y, 1, 1);
   });
   
-  // Get AI precision value
-  const precision = Number(aiPrecisionEl.value);
-  
-  // Expand selection based on edge detection
-  expandSelectionWithAI(aiCtx, data, c.width, c.height, precision);
-  
-  // Apply the AI-expanded selection to erase mask
-  eraseMaskCtx.globalCompositeOperation = 'destination-out';
-  eraseMaskCtx.drawImage(aiSelectionCanvas, 0, 0);
+  eraseMaskCtx.drawImage(selectionCanvas, 0, 0);
   eraseMaskCtx.globalCompositeOperation = 'source-over';
   
-  // Clear selection
+  console.log('Selection applied successfully');
+  
+  // Clear selection and redraw
   clearSelection();
   draw();
 });
-
-// AI-assisted selection expansion with edge detection
-function expandSelectionWithAI(aiCtx, imgData, width, height, precision) {
-  const data = imgData.data;
-  const visited = new Set();
-  const queue = [...currentSelection];
-  const edgeThreshold = 30; // Threshold for edge detection
-  
-  // Convert precision to a range (higher precision = smaller expansion)
-  const expansionRange = Math.max(1, Math.floor(20 - precision / 3));
-  
-  while (queue.length > 0) {
-    const [x, y] = queue.shift();
-    const key = `${x},${y}`;
-    
-    if (visited.has(key) || x < 0 || x >= width || y < 0 || y >= height) {
-      continue;
-    }
-    
-    visited.add(key);
-    
-    // Check if this pixel is part of the shirt (not transparent/background)
-    const pos = (y * width + x) * 4;
-    const alpha = data[pos + 3];
-    
-    if (alpha < 10) continue; // Skip transparent pixels
-    
-    // Calculate edge strength using Sobel operator
-    const edgeStrength = calculateEdgeStrength(data, x, y, width, height);
-    
-    // If not a strong edge, expand selection
-    if (edgeStrength < edgeThreshold) {
-      aiCtx.fillRect(x, y, 1, 1);
-      
-      // Add neighbors to queue based on expansion range
-      for (let dx = -expansionRange; dx <= expansionRange; dx++) {
-        for (let dy = -expansionRange; dy <= expansionRange; dy++) {
-          // Skip if too far (circular expansion)
-          if (Math.sqrt(dx*dx + dy*dy) > expansionRange) continue;
-          
-          const nx = x + dx;
-          const ny = y + dy;
-          const nKey = `${nx},${ny}`;
-          
-          if (!visited.has(nKey) && nx >= 0 && nx < width && ny >= 0 && ny < height) {
-            queue.push([nx, ny]);
-          }
-        }
-      }
-    }
-  }
-}
-
-// Calculate edge strength using Sobel operator
-function calculateEdgeStrength(data, x, y, width, height) {
-  if (x < 1 || x >= width-1 || y < 1 || y >= height-1) return 0;
-  
-  let gx = 0, gy = 0;
-  
-  // Sobel kernel for X and Y
-  for (let dy = -1; dy <= 1; dy++) {
-    for (let dx = -1; dx <= 1; dx++) {
-      const pos = ((y + dy) * width + (x + dx)) * 4;
-      const luminance = (0.299 * data[pos] + 0.587 * data[pos+1] + 0.114 * data[pos+2]) / 255;
-      
-      // Apply Sobel kernel
-      gx += luminance * (dx === 0 ? 0 : (dx === -1 ? -1 : 1));
-      gy += luminance * (dy === 0 ? 0 : (dy === -1 ? -1 : 1));
-    }
-  }
-  
-  // Calculate edge strength
-  return Math.sqrt(gx * gx + gy * gy) * 100;
-}
 
 // Clear Selection button
 clearSelectionBtn.addEventListener('click', clearSelection);
 
 function clearSelection() {
-  currentSelection = [];
+  currentSelection.clear();
   selectionOverlay.style.display = 'none';
   draw();
 }
@@ -596,7 +525,7 @@ c.addEventListener('pointercancel', e=>{
   lastPointerId=null;
 });
 
-// Selection Brush drawing
+// Selection Brush drawing - FIXED VERSION
 function doSelectionBrushStroke(clientX,clientY){
   const rect=c.getBoundingClientRect(); 
   const x=clientX-rect.left, y=clientY-rect.top;
@@ -610,12 +539,10 @@ function doSelectionBrushStroke(clientX,clientY){
         const px = Math.round(x + dx);
         const py = Math.round(y + dy);
         
-        // Only add if within canvas and not already selected
+        // Only add if within canvas
         if (px >= 0 && px < c.width && py >= 0 && py < c.height) {
           const key = `${px},${py}`;
-          if (!currentSelection.some(([sx, sy]) => sx === px && sy === py)) {
-            currentSelection.push([px, py]);
-          }
+          currentSelection.add(key);
         }
       }
     }
@@ -627,7 +554,7 @@ function doSelectionBrushStroke(clientX,clientY){
 
 // Visualize selection area
 function visualizeSelection() {
-  if (currentSelection.length === 0) {
+  if (currentSelection.size === 0) {
     selectionOverlay.style.display = 'none';
     return;
   }
@@ -635,7 +562,8 @@ function visualizeSelection() {
   // Calculate bounds
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   
-  currentSelection.forEach(([x, y]) => {
+  currentSelection.forEach(pixel => {
+    const [x, y] = pixel.split(',').map(Number);
     minX = Math.min(minX, x);
     minY = Math.min(minY, y);
     maxX = Math.max(maxX, x);
@@ -658,7 +586,8 @@ function drawWithSelection() {
   
   // Draw selection markers
   ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
-  currentSelection.forEach(([x, y]) => {
+  currentSelection.forEach(pixel => {
+    const [x, y] = pixel.split(',').map(Number);
     ctx.fillRect(x, y, 1, 1);
   });
 }
