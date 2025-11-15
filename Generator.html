@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Mockup — Safe Pinch + Undo + +/- Controls</title>
+<title>Mockup — Safe Pinch + Undo + +/- Controls + Smart Selection</title>
 <style>
 :root{--accent:#0b66ff}
 body{font-family:system-ui,-apple-system,Segoe UI,Roboto;display:flex;gap:16px;padding:14px;background:#f6f7fb;color:#0b0b0b}
@@ -21,12 +21,13 @@ button{background:var(--accent);color:#fff;border:0;padding:8px 10px;border-radi
 .step{background:#e6eefc;border:1px solid #d0e4ff;color:#0b66ff;padding:6px 8px;border-radius:6px;cursor:pointer}
 .badge{background:#f1f5f9;padding:6px 8px;border-radius:8px;font-size:12px}
 .footer{font-size:12px;color:#666;margin-top:12px;text-align:center}
+.tool-group{margin-top:8px;padding:8px;border:1px solid #e0e0e0;border-radius:8px}
 </style>
 </head>
 <body>
 
 <div class="panel">
-  <h3>Mockup — Safe Pinch + Undo + +/- Controls</h3>
+  <h3>Mockup — Safe Pinch + Undo + +/- Controls + Smart Selection</h3>
   <div class="small">Pinch-zoom native diperbolehkan. Eraser otomatis nonaktif saat multi-touch.</div>
 
   <label>Upload Baju (PNG transparan)</label>
@@ -87,19 +88,34 @@ button{background:var(--accent);color:#fff;border:0;padding:8px 10px;border-radi
     </div>
   </div>
 
-  <label style="margin-top:10px">Eraser (Brush)</label>
-  <div class="toolbar">
-    <button id="eraserBtn">Eraser</button>
-    <div class="badge">Size <button class="step" data-target="brushSize" data-step="-4">−</button>
-      <input id="brushSize" type="range" min="4" max="200" value="40" style="vertical-align:middle;width:110px">
-      <button class="step" data-target="brushSize" data-step="4">+</button>
+  <div class="tool-group">
+    <label style="margin-top:0">Smart Selection Tool</label>
+    <div class="toolbar">
+      <button id="smartSelectionBtn">Smart Selection</button>
+      <div class="badge">Tolerance <button class="step" data-target="tolerance" data-step="-5">−</button>
+        <input id="tolerance" type="range" min="5" max="100" value="30" style="vertical-align:middle;width:110px">
+        <button class="step" data-target="tolerance" data-step="5">+</button>
+      </div>
+      <button id="selectAllBtn" style="background:#10b981">Select All</button>
+      <button id="deselectBtn" style="background:#6b7280">Deselect</button>
     </div>
-    <div class="badge">Hard <button class="step" data-target="brushHard" data-step="-0.05">−</button>
-      <input id="brushHard" type="range" min="0" max="1" step="0.01" value="0.6" style="vertical-align:middle;width:110px">
-      <button class="step" data-target="brushHard" data-step="0.05">+</button>
+  </div>
+
+  <div class="tool-group">
+    <label style="margin-top:0">Eraser (Brush)</label>
+    <div class="toolbar">
+      <button id="eraserBtn">Eraser</button>
+      <div class="badge">Size <button class="step" data-target="brushSize" data-step="-4">−</button>
+        <input id="brushSize" type="range" min="4" max="200" value="40" style="vertical-align:middle;width:110px">
+        <button class="step" data-target="brushSize" data-step="4">+</button>
+      </div>
+      <div class="badge">Hard <button class="step" data-target="brushHard" data-step="-0.05">−</button>
+        <input id="brushHard" type="range" min="0" max="1" step="0.01" value="0.6" style="vertical-align:middle;width:110px">
+        <button class="step" data-target="brushHard" data-step="0.05">+</button>
+      </div>
+      <button id="undoBtn" style="background:#f39c12">Undo</button>
+      <button id="resetEraseBtn" style="background:#e53e3e">Reset Erase</button>
     </div>
-    <button id="undoBtn" style="background:#f39c12">Undo</button>
-    <button id="resetEraseBtn" style="background:#e53e3e">Reset Erase</button>
   </div>
 
   <label style="margin-top:10px">Actions</label>
@@ -123,12 +139,7 @@ button{background:var(--accent);color:#fff;border:0;padding:8px 10px;border-radi
 </div>
 
 <script>
-/* New: Pinch-safe eraser + undo + +/- control implementation
-   Notes:
-   - Native pinch-zoom (browser) allowed. We detect multi-touch via pointer tracking and
-     disable eraser when activePointerCount > 1.
-   - +/- buttons adjust sliders precisely.
-*/
+/* Enhanced: Added Smart Selection Tool with color-based region detection */
 
 const c = document.getElementById('c');
 const ctx = c.getContext('2d');
@@ -146,6 +157,7 @@ const UNDO_LIMIT = 20;
 const activePointers = new Set();
 
 let eraserMode = true;
+let smartSelectionMode = false;
 let isErasing = false;
 let dragging = false;
 let dragOffset = {x:0,y:0};
@@ -167,6 +179,10 @@ const downloadBtn = document.getElementById('downloadBtn');
 const resetBtn = document.getElementById('resetBtn');
 
 const eraserBtn = document.getElementById('eraserBtn');
+const smartSelectionBtn = document.getElementById('smartSelectionBtn');
+const selectAllBtn = document.getElementById('selectAllBtn');
+const deselectBtn = document.getElementById('deselectBtn');
+const toleranceEl = document.getElementById('tolerance');
 const brushSizeEl = document.getElementById('brushSize');
 const brushHardEl = document.getElementById('brushHard');
 const undoBtn = document.getElementById('undoBtn');
@@ -323,24 +339,141 @@ undoBtn.addEventListener('click', undoErase);
 resetEraseBtn.addEventListener('click', ()=>{ pushUndo(); eraseMaskCtx.clearRect(0,0,eraseMask.width,eraseMask.height); eraseMaskCtx.fillStyle='white'; eraseMaskCtx.fillRect(0,0,eraseMask.width,eraseMask.height); draw(); });
 
 // Eraser toggle
-eraserBtn.addEventListener('click', ()=>{ eraserMode = !eraserMode; eraserBtn.style.background = eraserMode ? '#111' : '#666'; eraserBtn.textContent = eraserMode ? 'Eraser' : 'Paint'; });
+eraserBtn.addEventListener('click', ()=>{ 
+  eraserMode = !eraserMode; 
+  smartSelectionMode = false;
+  eraserBtn.style.background = eraserMode ? '#111' : '#666'; 
+  smartSelectionBtn.style.background = '#666';
+  eraserBtn.textContent = eraserMode ? 'Eraser' : 'Paint'; 
+});
+
+// Smart Selection toggle
+smartSelectionBtn.addEventListener('click', ()=>{ 
+  smartSelectionMode = !smartSelectionMode; 
+  eraserMode = false;
+  smartSelectionBtn.style.background = smartSelectionMode ? '#111' : '#666'; 
+  eraserBtn.style.background = '#666';
+});
+
+// Select All button
+selectAllBtn.addEventListener('click', ()=>{ 
+  pushUndo();
+  eraseMaskCtx.clearRect(0,0,eraseMask.width,eraseMask.height);
+  eraseMaskCtx.fillStyle = 'white';
+  eraseMaskCtx.fillRect(0,0,eraseMask.width,eraseMask.height);
+  draw();
+});
+
+// Deselect button
+deselectBtn.addEventListener('click', ()=>{ 
+  pushUndo();
+  eraseMaskCtx.clearRect(0,0,eraseMask.width,eraseMask.height);
+  eraseMaskCtx.fillStyle = 'black';
+  eraseMaskCtx.fillRect(0,0,eraseMask.width,eraseMask.height);
+  draw();
+});
+
+// Smart Selection function - detects similar color regions
+function smartSelection(x, y) {
+  if (!shirtImg) return;
+  
+  pushUndo();
+  
+  // Get shirt image data
+  const tmp = document.createElement('canvas');
+  tmp.width = c.width;
+  tmp.height = c.height;
+  const tctx = tmp.getContext('2d');
+  tctx.drawImage(shirtImg, 0, 0, tmp.width, tmp.height);
+  const imgData = tctx.getImageData(0, 0, tmp.width, tmp.height);
+  const data = imgData.data;
+  
+  // Get target color at click position
+  const pos = (Math.floor(y) * tmp.width + Math.floor(x)) * 4;
+  const targetR = data[pos];
+  const targetG = data[pos + 1];
+  const targetB = data[pos + 2];
+  const targetA = data[pos + 3];
+  
+  // Tolerance from slider
+  const tolerance = Number(toleranceEl.value);
+  
+  // Create temporary canvas for flood fill
+  const selectionCanvas = document.createElement('canvas');
+  selectionCanvas.width = tmp.width;
+  selectionCanvas.height = tmp.height;
+  const sctx = selectionCanvas.getContext('2d');
+  sctx.clearRect(0, 0, tmp.width, tmp.height);
+  
+  // Perform flood fill algorithm
+  const stack = [[x, y]];
+  const visited = new Set();
+  
+  while (stack.length > 0) {
+    const [cx, cy] = stack.pop();
+    const key = `${cx},${cy}`;
+    
+    if (visited.has(key) || cx < 0 || cx >= tmp.width || cy < 0 || cy >= tmp.height) {
+      continue;
+    }
+    
+    visited.add(key);
+    
+    const cPos = (Math.floor(cy) * tmp.width + Math.floor(cx)) * 4;
+    const r = data[cPos];
+    const g = data[cPos + 1];
+    const b = data[cPos + 2];
+    const a = data[cPos + 3];
+    
+    // Calculate color difference
+    const diff = Math.sqrt(
+      Math.pow(r - targetR, 2) + 
+      Math.pow(g - targetG, 2) + 
+      Math.pow(b - targetB, 2)
+    );
+    
+    // If similar enough, add to selection and check neighbors
+    if (diff <= tolerance && a > 10) {
+      // Mark this pixel in selection
+      sctx.fillStyle = 'white';
+      sctx.fillRect(cx, cy, 1, 1);
+      
+      // Add neighbors to stack
+      stack.push([cx + 1, cy]);
+      stack.push([cx - 1, cy]);
+      stack.push([cx, cy + 1]);
+      stack.push([cx, cy - 1]);
+    }
+  }
+  
+  // Apply the selection to the erase mask
+  eraseMaskCtx.globalCompositeOperation = 'destination-out';
+  eraseMaskCtx.drawImage(selectionCanvas, 0, 0);
+  eraseMaskCtx.globalCompositeOperation = 'source-over';
+  
+  draw();
+}
 
 // pointer tracking (multi-touch safe)
-// Track pointerdown/up to identify number of active pointers. If >1, disable erasing actions.
 c.addEventListener('pointerdown', e=>{
   activePointers.add(e.pointerId);
   // if multi-touch active, don't start erasing (allow pinch-zoom native)
   if(activePointers.size > 1){
-    // if currently capturing, release
     isErasing = false;
     dragging = false;
     lastPointerId = null;
-    // still allow pointer capture for pinch? do not capture to keep native pinch behaviour
     return;
   }
 
   // single touch: decide whether to start drag or eraser/paint
   const rect=c.getBoundingClientRect(); const x=e.clientX-rect.left, y=e.clientY-rect.top;
+  
+  // Smart selection mode
+  if (smartSelectionMode && shirtImg) {
+    smartSelection(x, y);
+    return;
+  }
+  
   if(!eraserMode && patternImg){
     // hit test for drag
     const w = (patternImg.naturalWidth||patternImg.width) * Math.min((c.width*0.6)/(patternImg.naturalWidth||patternImg.width),(c.height*0.6)/(patternImg.naturalHeight||patternImg.height)) * patternState.scale;
@@ -350,13 +483,11 @@ c.addEventListener('pointerdown', e=>{
     if(Math.abs(rx) <= w/2+20 && Math.abs(ry) <= h/2+20){ dragging=true; dragOffset.x=dx; dragOffset.y=dy; c.setPointerCapture(e.pointerId); lastPointerId=e.pointerId; return; }
   }
 
-  // Start erasing/painting if eraserMode OR (paint mode) -> we allow paint to write back? For now both modes use same brush but destination-out will erase.
-  // ensure eraseMask size
+  // Start erasing/painting if eraserMode OR (paint mode)
   ensureEraseMaskSize(c.width,c.height);
   pushUndo();
   isErasing = true;
   lastPointerId = e.pointerId;
-  // capture pointer to keep receiving move/up
   try{ c.setPointerCapture(e.pointerId); }catch(_){} 
   doBrushStroke(e.clientX,e.clientY);
 });
