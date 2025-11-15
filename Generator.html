@@ -3,79 +3,81 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Mockup Generator — Masked (PNG alpha)</title>
+<title>Mockup — Brush Eraser + Displacement (Ready for GitHub)</title>
 <style>
 :root{--accent:#0b66ff}
-body{font-family:system-ui,-apple-system,Segoe UI,Roboto;display:flex;gap:20px;padding:20px;background:#f6f7fb;color:#0b0b0b}
-.panel{width:380px;background:#fff;border-radius:12px;box-shadow:0 6px 18px rgba(20,20,40,.08);padding:16px}
+body{font-family:system-ui,-apple-system,Segoe UI,Roboto;display:flex;gap:20px;padding:18px;background:#f6f7fb;color:#0b0b0b}
+.panel{width:380px;background:#fff;border-radius:12px;box-shadow:0 6px 18px rgba(20,20,40,.08);padding:14px}
 .preview-wrap{flex:1;display:flex;flex-direction:column;gap:12px}
 .preview{display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#fff,#fafafa);padding:12px;border-radius:12px}
 canvas{background:#fff;border-radius:8px;box-shadow:0 6px 18px rgba(20,20,40,.06);max-width:100%;height:auto}
-label{display:block;font-size:13px;margin-top:10px;color:#444}
-input[type=file]{display:block;margin-top:6px}
+label{display:block;font-size:13px;margin-top:8px;color:#444}
 .row{display:flex;gap:8px;align-items:center}
 .controls-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:center}
 input[type=range]{width:100%}
-button{background:var(--accent);color:#fff;border:0;padding:9px 12px;border-radius:8px;cursor:pointer}
+button{background:var(--accent);color:#fff;border:0;padding:8px 10px;border-radius:8px;cursor:pointer}
 .small{font-size:12px;color:#666}
+.toggle{display:inline-flex;align-items:center;gap:8px}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.badge{background:#f1f5f9;padding:6px 8px;border-radius:8px;font-size:12px}
 .footer{font-size:12px;color:#666;margin-top:12px;text-align:center}
-.switch{display:flex;gap:8px;align-items:center}
 </style>
 </head>
 <body>
 
 <div class="panel">
-  <h3>Mockup — Masked PNG (alpha)</h3>
-  <div class="small">Gunakan PNG baju dengan background transparan. Motif hanya tampil di area non-transparent (alpha mask).</div>
+  <h3>Mockup — Brush Eraser + Displacement</h3>
+  <div class="small">Gunakan PNG baju transparan. Eraser bersifat non-destruktif (mask) + undo.</div>
 
-  <label>1) Upload Foto Baju (PNG transparan)</label>
+  <label>1) Upload Baju (PNG transparan)</label>
   <input id="shirtFile" type="file" accept="image/*">
 
   <label>2) Upload Motif</label>
   <input id="patternFile" type="file" accept="image/*">
 
-  <label>3) Transform</label>
-  <div class="row">
-    <span style="width:70px">Pos X</span><input id="posX" type="range" min="-2000" max="2000" value="450">
-  </div>
-  <div class="row">
-    <span style="width:70px">Pos Y</span><input id="posY" type="range" min="-2000" max="2000" value="550">
-  </div>
-  <div class="row">
-    <span style="width:70px">Scale</span><input id="scale" type="range" min="0.1" max="5" step="0.01" value="1">
-  </div>
-  <div class="row">
-    <span style="width:70px">Rotasi</span><input id="rotation" type="range" min="-180" max="180" value="0">
-  </div>
-  <div class="row">
-    <span style="width:70px">Opacity</span><input id="opacity" type="range" min="0" max="1" step="0.01" value="1">
-  </div>
+  <label style="margin-top:10px">Transform</label>
+  <div class="row"><span style="width:70px">Pos X</span><input id="posX" type="range" min="-2000" max="2000" value="450"></div>
+  <div class="row"><span style="width:70px">Pos Y</span><input id="posY" type="range" min="-2000" max="2000" value="550"></div>
+  <div class="row"><span style="width:70px">Scale</span><input id="scale" type="range" min="0.1" max="5" step="0.01" value="1"></div>
+  <div class="row"><span style="width:70px">Rotasi</span><input id="rotation" type="range" min="-180" max="180" value="0"></div>
+  <div class="row"><span style="width:70px">Opacity</span><input id="opacity" type="range" min="0" max="1" step="0.01" value="1"></div>
 
   <div class="controls-grid" style="margin-top:8px">
     <div class="row"><button id="centerBtn" style="flex:1">Center</button></div>
     <div class="row"><button id="tileBtn" style="width:110px">Toggle Tile</button></div>
   </div>
 
-  <label style="margin-top:12px">4) Displacement</label>
+  <label style="margin-top:10px">Displacement</label>
   <div class="row">
-    <div class="switch"><input id="displaceToggle" type="checkbox"><label for="displaceToggle" class="small">Aktifkan</label></div>
+    <div class="toggle"><input id="displaceToggle" type="checkbox"><label for="displaceToggle" class="small">Aktifkan</label></div>
     <div style="flex:1"><input id="displaceStrength" type="range" min="0" max="120" value="18"></div>
   </div>
 
-  <label style="margin-top:12px">5) Aksi</label>
-  <div class="row">
-    <button id="downloadBtn">Download PNG</button>
-    <button id="resetBtn" style="background:#eee;color:#111">Reset</button>
+  <label style="margin-top:10px">Eraser (Brush)</label>
+  <div class="toolbar">
+    <button id="eraserBtn" style="background:#111;color:#fff">Eraser</button>
+    <button id="eraseModeDraw" class="badge">Mode: Erase</button>
+    <div class="badge">Size <input id="brushSize" type="range" min="4" max="200" value="40" style="vertical-align:middle;width:120px"></div>
+    <div class="badge">Hardness <input id="brushHard" type="range" min="0" max="1" step="0.01" value="0.6" style="vertical-align:middle;width:120px"></div>
+    <button id="undoBtn" style="background:#f39c12">Undo</button>
+    <button id="resetEraseBtn" style="background:#e53e3e">Reset Erase</button>
   </div>
 
-  <div id="tips" class="small">Tip: gunakan PNG baju dengan area transparan di luar baju. Foto ≤ 2000px disarankan agar cepat.</div>
-  <div class="footer">Copy–paste file ini ke GitHub sebagai index.html — siap pakai.</div>
+  <label style="margin-top:10px">Actions</label>
+  <div class="row">
+    <button id="downloadBtn">Download PNG</button>
+    <button id="resetBtn" style="background:#eee;color:#111">Reset All</button>
+  </div>
+
+  <div class="small" style="margin-top:8px">Tip: gunakan Eraser di area kancing/kerah/lengan untuk menyesuaikan motif.</div>
+  <div class="footer">Copy–paste ke index.html — siap dipakai.</div>
 </div>
 
 <div class="preview-wrap">
   <div class="preview">
     <canvas id="c" width="900" height="1100" aria-label="mockup canvas"></canvas>
   </div>
+
   <div style="display:flex;gap:12px;align-items:flex-start">
     <div>
       <div class="small">Live Preview</div>
@@ -89,19 +91,32 @@ button{background:var(--accent);color:#fff;border:0;padding:9px 12px;border-radi
 </div>
 
 <script>
-/* Mask-from-PNG alpha + manual control + displacement */
+/*
+Full-featured single-file HTML:
+- Manual transform (pos/scale/rotate)
+- Displacement (from shirt luminance)
+- Mask from shirt PNG alpha
+- Brush eraser with softness (hardness), undo stack, reset
+- Downscale/upscale for download (high-res)
+*/
 
-// Main canvas
 const c = document.getElementById('c');
 const ctx = c.getContext('2d');
 
-let shirtImg = null;      // shirt image (PNG with alpha)
-let patternImg = null;    // motif image
-let maskCanvas = null;    // mask built from shirt alpha
-let lumMap = null;        // luminance map for displacement (from shirt rgb)
-let patternState = { x: c.width/2, y: c.height/2, scale: 1, rot: 0, alpha: 1, tiled: false };
-let dragging = false;
-let dragOffset = { x:0, y:0 };
+let shirtImg = null;
+let patternImg = null;
+let maskCanvas = null; // mask from shirt alpha (white where shirt exists)
+let lumMap = null;     // luminance map for displacement
+let patternState = { x: c.width/2, y: c.height/2, scale:1, rot:0, alpha:1, tiled:false };
+
+let eraserMode = true; // if user currently using eraser tool
+// Erase mask: white = keep motif, transparent = erased
+const eraseMask = document.createElement('canvas');
+let eraseMaskCtx = eraseMask.getContext('2d');
+
+// Undo stack for eraseMask (store ImageData)
+const undoStack = [];
+const UNDO_LIMIT = 20;
 
 // UI refs
 const shirtFile = document.getElementById('shirtFile');
@@ -117,49 +132,73 @@ const displaceToggle = document.getElementById('displaceToggle');
 const displaceStrength = document.getElementById('displaceStrength');
 const downloadBtn = document.getElementById('downloadBtn');
 const resetBtn = document.getElementById('resetBtn');
+
+const eraserBtn = document.getElementById('eraserBtn');
+const eraseModeDraw = document.getElementById('eraseModeDraw');
+const brushSizeEl = document.getElementById('brushSize');
+const brushHardEl = document.getElementById('brushHard');
+const undoBtn = document.getElementById('undoBtn');
+const resetEraseBtn = document.getElementById('resetEraseBtn');
+
 const livePreview = document.getElementById('livePreview');
 const smallPreview = document.getElementById('smallPreview');
 
-// load images from file input
+let isErasing = false;
+let lastPointerId = null;
+
+// helper: ensure eraseMask matches canvas size
+function ensureEraseMaskSize(w,h){
+  if(eraseMask.width !== w || eraseMask.height !== h){
+    eraseMask.width = w; eraseMask.height = h;
+    eraseMaskCtx = eraseMask.getContext('2d');
+    // initialize full opaque (white)
+    eraseMaskCtx.clearRect(0,0,w,h);
+    eraseMaskCtx.fillStyle = 'white';
+    eraseMaskCtx.fillRect(0,0,w,h);
+    // clear undo
+    undoStack.length = 0;
+  }
+}
+
+// load image util
 function loadImageFromFile(file, cb){
   const r = new FileReader();
-  r.onload = e => {
+  r.onload = e=>{
     const img = new Image();
-    img.onload = () => cb(img);
+    img.onload = ()=>cb(img);
     img.src = e.target.result;
   };
   r.readAsDataURL(file);
 }
 
-// when shirt uploaded
+// shirt upload
 shirtFile.addEventListener('change', e=>{
   const f = e.target.files[0]; if(!f) return;
   loadImageFromFile(f, img=>{
     shirtImg = img;
     fitCanvasToShirt();
-    generateMaskFromShirt();   // mask from alpha channel
-    computeLuminanceMap();     // used for displacement
+    generateMaskFromShirt();
+    computeLuminanceMap();
+    // ensure eraseMask sized
+    ensureEraseMaskSize(c.width, c.height);
     draw();
   });
 });
 
-// when motif uploaded
+// pattern upload
 patternFile.addEventListener('change', e=>{
   const f = e.target.files[0]; if(!f) return;
   loadImageFromFile(f, img=>{
     patternImg = img;
-    patternState.x = c.width/2;
-    patternState.y = c.height/2;
-    patternState.scale = 1;
-    patternState.rot = 0;
-    patternState.alpha = 1;
-    patternState.tiled = false;
+    patternState.x = c.width/2; patternState.y = c.height/2;
+    patternState.scale = 1; patternState.rot = 0; patternState.alpha = 1; patternState.tiled = false;
     syncUI();
+    ensureEraseMaskSize(c.width, c.height);
     draw();
   });
 });
 
-// fit canvas size to shirt (maintain ratio)
+// fit canvas to shirt natural ratio
 function fitCanvasToShirt(){
   if(!shirtImg) return;
   const maxW = 1400, maxH = 1700;
@@ -168,50 +207,44 @@ function fitCanvasToShirt(){
   const ratio = Math.min(maxW / w, maxH / h, 1);
   c.width = Math.round(w * ratio);
   c.height = Math.round(h * ratio);
-  // recompute mask/lum when resized
-  if(shirtImg){ generateMaskFromShirt(); computeLuminanceMap(); }
+  ensureEraseMaskSize(c.width, c.height);
   if(!patternImg){ patternState.x = c.width/2; patternState.y = c.height/2; }
   syncUI();
 }
 
-// Generate maskCanvas from shirt PNG alpha channel
+// generate maskCanvas from shirt alpha (PNG)
 function generateMaskFromShirt(){
-  if(!shirtImg) { maskCanvas = null; return; }
+  if(!shirtImg){ maskCanvas = null; return; }
   const tmp = document.createElement('canvas');
   tmp.width = c.width; tmp.height = c.height;
   const tctx = tmp.getContext('2d');
-  // draw shirt to tmp at canvas size (this preserves alpha)
   tctx.clearRect(0,0,tmp.width,tmp.height);
   tctx.drawImage(shirtImg, 0, 0, tmp.width, tmp.height);
   const id = tctx.getImageData(0,0,tmp.width,tmp.height);
   const data = id.data;
 
-  // create mask canvas: where alpha > threshold => opaque, else transparent
   const mask = document.createElement('canvas');
   mask.width = tmp.width; mask.height = tmp.height;
   const mctx = mask.getContext('2d');
-  const mImage = mctx.createImageData(tmp.width, tmp.height);
-  const mData = mImage.data;
+  const mImg = mctx.createImageData(tmp.width, tmp.height);
+  const mData = mImg.data;
 
-  const threshold = 10; // alpha threshold (0-255). adjust if needed.
-
+  const TH = 10; // alpha threshold
   for(let i=0;i<data.length;i+=4){
-    const a = data[i+3]; // alpha of shirt source
-    if(a > threshold){
-      // keep white opaque (mask)
+    const a = data[i+3];
+    if(a > TH){
       mData[i] = 255; mData[i+1] = 255; mData[i+2] = 255; mData[i+3] = 255;
     } else {
-      // transparent
       mData[i] = 0; mData[i+1] = 0; mData[i+2] = 0; mData[i+3] = 0;
     }
   }
-  mctx.putImageData(mImage, 0, 0);
+  mctx.putImageData(mImg, 0, 0);
   maskCanvas = mask;
 }
 
-// compute luminance map (for displacement) from shirt visual (RGB)
+// compute luminance used for displacement
 function computeLuminanceMap(){
-  if(!shirtImg) { lumMap = null; return; }
+  if(!shirtImg){ lumMap = null; return; }
   const tmp = document.createElement('canvas');
   tmp.width = c.width; tmp.height = c.height;
   const tctx = tmp.getContext('2d');
@@ -219,13 +252,13 @@ function computeLuminanceMap(){
   tctx.drawImage(shirtImg, 0, 0, tmp.width, tmp.height);
   const id = tctx.getImageData(0,0,tmp.width,tmp.height).data;
   lumMap = new Float32Array(tmp.width * tmp.height);
-  for(let i=0, j=0; i<id.length; i+=4, j++){
+  for(let i=0,j=0;i<id.length;i+=4,j++){
     lumMap[j] = (0.2126*id[i] + 0.7152*id[i+1] + 0.0722*id[i+2]) / 255;
   }
   lumMap = boxBlurFloat(lumMap, tmp.width, tmp.height, 2);
 }
 
-// separable box blur for Float32Array
+// separable box blur
 function boxBlurFloat(arr,w,h,radius){
   if(radius < 1) return arr;
   const tmp = new Float32Array(arr.length);
@@ -253,23 +286,17 @@ function boxBlurFloat(arr,w,h,radius){
   return out;
 }
 
-// draw main canvas (shirt already drawn first)
+// main draw function
 function draw(){
   ctx.clearRect(0,0,c.width,c.height);
 
-  // draw shirt (preserve alpha)
-  if(shirtImg){
-    ctx.drawImage(shirtImg, 0, 0, c.width, c.height);
-  } else {
-    drawCheckerBackground(ctx, c.width, c.height);
-  }
+  // 1) draw shirt (preserve alpha)
+  if(shirtImg) ctx.drawImage(shirtImg, 0, 0, c.width, c.height);
+  else drawCheckerBackground(ctx, c.width, c.height);
 
-  if(!patternImg){
-    updatePreviews();
-    return;
-  }
+  if(!patternImg){ updatePreviews(); return; }
 
-  // 1) draw transformed motif into patternCanvas
+  // 2) draw pattern with transforms into patternCanvas
   const pw = c.width, ph = c.height;
   const patternCanvas = document.createElement('canvas');
   patternCanvas.width = pw; patternCanvas.height = ph;
@@ -297,33 +324,44 @@ function draw(){
   }
   pctx.restore();
 
-  // 2) If displacement disabled or no lumMap -> draw patternCanvas directly but masked
+  // 3) if displacement disabled or no lumMap -> apply erase mask & shirt mask then draw normally
   if(!displaceToggle.checked || !lumMap){
-    // draw pattern on top, then apply mask so motif only appears inside shirt alpha
-    ctx.globalAlpha = patternState.alpha;
-    // draw pattern
-    ctx.drawImage(patternCanvas, 0, 0);
-    // apply mask if exists
-    if(maskCanvas){
-      ctx.globalCompositeOperation = 'destination-in';
-      ctx.drawImage(maskCanvas, 0, 0);
-      ctx.globalCompositeOperation = 'source-over';
+    // apply erase mask: we want to keep only areas where eraseMask is opaque
+    const temp = document.createElement('canvas'); temp.width = pw; temp.height = ph;
+    const tctx = temp.getContext('2d');
+    tctx.clearRect(0,0,pw,ph);
+    tctx.drawImage(pctx.canvas, 0, 0);
+    // destination-in by eraseMask (white = keep)
+    if(eraseMask.width && eraseMask.height){
+      tctx.globalCompositeOperation = 'destination-in';
+      tctx.drawImage(eraseMask, 0, 0);
+      tctx.globalCompositeOperation = 'source-over';
     }
+    // then apply shirt mask so pattern only in shirt alpha
+    if(maskCanvas){
+      tctx.globalCompositeOperation = 'destination-in';
+      tctx.drawImage(maskCanvas, 0, 0);
+      tctx.globalCompositeOperation = 'source-over';
+    }
+    // finally draw onto main canvas with blend
+    ctx.globalAlpha = patternState.alpha;
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.drawImage(temp, 0, 0);
+    ctx.globalCompositeOperation = 'source-over';
     ctx.globalAlpha = 1;
     updatePreviews();
     return;
   }
 
-  // 3) displacement: sample pixels from patternCanvas guided by lumMap gradients -> build displaced canvas
+  // 4) displacement path: sample from patternCanvas guided by lumMap gradients → build displaced canvas
   const pData = pctx.getImageData(0,0,pw,ph).data;
-  const displaced = document.createElement('canvas');
-  displaced.width = pw; displaced.height = ph;
+  const displaced = document.createElement('canvas'); displaced.width = pw; displaced.height = ph;
   const dctx = displaced.getContext('2d');
-  const out = dctx.createImageData(pw, ph);
+  const out = dctx.createImageData(pw,ph);
   const outData = out.data;
   const strength = Number(displaceStrength.value);
 
-  // compute gradient of lumMap
+  // compute simple gradient of lumMap
   const gx = new Float32Array(pw*ph);
   const gy = new Float32Array(pw*ph);
   for(let y=0;y<ph;y++){
@@ -338,42 +376,52 @@ function draw(){
     }
   }
 
-  // sample from patternCanvas with displacement offsets
   for(let y=0;y<ph;y++){
     for(let x=0;x<pw;x++){
       const i = y*pw + x;
       const dx = -gx[i] * (strength/50);
       const dy = -gy[i] * (strength/50);
-      let sx = Math.round(x + dx), sy = Math.round(y + dy);
+      let sx = Math.round(x + dx);
+      let sy = Math.round(y + dy);
       if(sx<0) sx=0; if(sx>=pw) sx=pw-1;
       if(sy<0) sy=0; if(sy>=ph) sy=ph-1;
       const si = (sy*pw + sx)*4, oi = i*4;
       outData[oi]   = pData[si];
       outData[oi+1] = pData[si+1];
       outData[oi+2] = pData[si+2];
-      outData[oi+3] = pData[si+3]; // preserve pattern alpha
+      outData[oi+3] = pData[si+3];
     }
   }
   dctx.putImageData(out, 0, 0);
 
-  // 4) blend displaced onto main canvas (shirt already drawn), then apply mask (destination-in)
+  // apply eraseMask then maskCanvas on displaced
+  const temp2 = document.createElement('canvas'); temp2.width = pw; temp2.height = ph;
+  const t2 = temp2.getContext('2d');
+  t2.clearRect(0,0,pw,ph);
+  t2.drawImage(displaced, 0, 0);
+  if(eraseMask.width && eraseMask.height){
+    // destination-in: keep where eraseMask opaque
+    t2.globalCompositeOperation = 'destination-in';
+    t2.drawImage(eraseMask, 0, 0);
+    t2.globalCompositeOperation = 'source-over';
+  }
+  if(maskCanvas){
+    t2.globalCompositeOperation = 'destination-in';
+    t2.drawImage(maskCanvas, 0, 0);
+    t2.globalCompositeOperation = 'source-over';
+  }
+
+  // blend onto main canvas
   ctx.globalAlpha = patternState.alpha;
   ctx.globalCompositeOperation = 'multiply';
-  ctx.drawImage(displaced, 0, 0);
+  ctx.drawImage(temp2, 0, 0);
   ctx.globalCompositeOperation = 'source-over';
-
-  // apply mask so motif only visible inside shirt alpha
-  if(maskCanvas){
-    ctx.globalCompositeOperation = 'destination-in';
-    ctx.drawImage(maskCanvas, 0, 0);
-    ctx.globalCompositeOperation = 'source-over';
-  }
   ctx.globalAlpha = 1;
 
   updatePreviews();
 }
 
-// previews update
+// update preview thumbnails
 function updatePreviews(){
   try{
     const data = c.toDataURL('image/png');
@@ -382,7 +430,7 @@ function updatePreviews(){
   }catch(e){}
 }
 
-// checker draw for empty shirt
+// draw checker background when no shirt
 function drawCheckerBackground(context,w,h){
   const size = 16;
   for(let y=0;y<h;y+=size){
@@ -394,7 +442,7 @@ function drawCheckerBackground(context,w,h){
   }
 }
 
-// sync UI
+// UI sync
 function syncUI(){
   posX.value = Math.round(patternState.x);
   posY.value = Math.round(patternState.y);
@@ -403,36 +451,157 @@ function syncUI(){
   opacityEl.value = patternState.alpha;
 }
 
-// pointer drag for motif
+// ERASER TOOL IMPLEMENTATION
+// The eraseMask is a canvas where white=keep motif, transparent=erased area.
+// When user erases, we draw a radial gradient circle onto eraseMask using 'destination-out'
+// so it makes transparent holes (i.e. erases).
+
+function pushUndo(){
+  try{
+    const data = eraseMaskCtx.getImageData(0,0,eraseMask.width, eraseMask.height);
+    undoStack.push(data);
+    if(undoStack.length > UNDO_LIMIT) undoStack.shift();
+    undoBtn.disabled = false;
+  }catch(e){}
+}
+
+function undoErase(){
+  if(undoStack.length === 0) return;
+  const img = undoStack.pop();
+  eraseMaskCtx.putImageData(img, 0, 0);
+  if(undoStack.length === 0) undoBtn.disabled = true;
+  draw();
+}
+
+undoBtn.addEventListener('click', undoErase);
+
+// reset erase mask
+resetEraseBtn.addEventListener('click', ()=>{
+  if(!eraseMaskCtx) return;
+  pushUndo();
+  eraseMaskCtx.clearRect(0,0,eraseMask.width, eraseMask.height);
+  eraseMaskCtx.fillStyle = 'white';
+  eraseMaskCtx.fillRect(0,0,eraseMask.width, eraseMask.height);
+  draw();
+});
+
+// Eraser toggle button visual
+eraserBtn.addEventListener('click', ()=>{
+  eraserMode = !eraserMode;
+  eraserBtn.style.background = eraserMode ? '#111' : '#666';
+  eraseModeDraw.textContent = eraserMode ? 'Mode: Erase' : 'Mode: Paint';
+});
+
+// pointer events on canvas for erasing
 c.addEventListener('pointerdown', e=>{
-  if(!patternImg) return;
+  // If pointerdown occurs but user also wants to move motif (drag) we allow both:
+  // If patternImg exists and user clicked inside motif bounding box, we start drag move.
+  // But if Eraser active, we start erasing regardless.
   const rect = c.getBoundingClientRect();
   const x = e.clientX - rect.left;
   const y = e.clientY - rect.top;
-  const w = (patternImg.naturalWidth || patternImg.width) * Math.min((c.width*0.6)/(patternImg.naturalWidth||patternImg.width),(c.height*0.6)/(patternImg.naturalHeight||patternImg.height)) * patternState.scale;
-  const h = (patternImg.naturalHeight || patternImg.height) * Math.min((c.width*0.6)/(patternImg.naturalWidth||patternImg.width),(c.height*0.6)/(patternImg.naturalHeight||patternImg.height)) * patternState.scale;
-  const dx = x - patternState.x; const dy = y - patternState.y;
-  const theta = -patternState.rot * Math.PI/180;
-  const rx = dx * Math.cos(theta) - dy * Math.sin(theta);
-  const ry = dx * Math.sin(theta) + dy * Math.cos(theta);
-  if(Math.abs(rx) <= w/2 + 20 && Math.abs(ry) <= h/2 + 20){
-    dragging = true; dragOffset.x = dx; dragOffset.y = dy; c.setPointerCapture(e.pointerId);
+
+  // Hit test for transformation drag (only when not erasing)
+  if(!eraserMode && patternImg){
+    // same hit test as earlier
+    const w = (patternImg.naturalWidth || patternImg.width) * Math.min((c.width*0.6)/(patternImg.naturalWidth||patternImg.width),(c.height*0.6)/(patternImg.naturalHeight||patternImg.height)) * patternState.scale;
+    const h = (patternImg.naturalHeight || patternImg.height) * Math.min((c.width*0.6)/(patternImg.naturalWidth||patternImg.width),(c.height*0.6)/(patternImg.naturalHeight||patternImg.height)) * patternState.scale;
+    const dx = x - patternState.x, dy = y - patternState.y;
+    const theta = -patternState.rot * Math.PI/180;
+    const rx = dx * Math.cos(theta) - dy * Math.sin(theta);
+    const ry = dx * Math.sin(theta) + dy * Math.cos(theta);
+    if(Math.abs(rx) <= w/2 + 20 && Math.abs(ry) <= h/2 + 20){
+      // start drag
+      dragging = true;
+      dragOffset.x = dx; dragOffset.y = dy;
+      c.setPointerCapture(e.pointerId);
+      lastPointerId = e.pointerId;
+      return;
+    }
+  }
+
+  // Otherwise start erasing/painting mode
+  if(eraserMode || !eraserMode){
+    // ensure eraseMask exists
+    ensureEraseMaskSize(c.width, c.height);
+    pushUndo(); // push state before change
+    isErasing = true;
+    lastPointerId = e.pointerId;
+    c.setPointerCapture(e.pointerId);
+    doBrushStroke(e.clientX, e.clientY);
   }
 });
-c.addEventListener('pointermove', e=>{
-  if(!dragging) return;
-  const rect = c.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
-  patternState.x = x - dragOffset.x;
-  patternState.y = y - dragOffset.y;
-  syncUI(); draw();
-});
-c.addEventListener('pointerup', e=>{ dragging=false; try{ c.releasePointerCapture(e.pointerId);}catch(e){} });
-c.addEventListener('pointercancel', ()=>{ dragging=false; });
 
-// sliders listeners
-[posX,posY,scaleEl,rotationEl,opacityEl,displaceStrength].forEach(el=>{
+c.addEventListener('pointermove', e=>{
+  if(dragging && !eraserMode){
+    const rect = c.getBoundingClientRect();
+    const x = e.clientX - rect.left; const y = e.clientY - rect.top;
+    patternState.x = x - dragOffset.x; patternState.y = y - dragOffset.y;
+    syncUI(); draw();
+    return;
+  }
+  if(!isErasing || lastPointerId !== e.pointerId) return;
+  doBrushStroke(e.clientX, e.clientY);
+});
+
+c.addEventListener('pointerup', e=>{
+  if(lastPointerId === e.pointerId){
+    isErasing = false;
+    dragging = false;
+    try{ c.releasePointerCapture(e.pointerId); }catch(e){}
+    lastPointerId = null;
+  }
+});
+c.addEventListener('pointercancel', e=>{
+  isErasing = false; dragging=false; lastPointerId=null;
+});
+
+function doBrushStroke(clientX, clientY){
+  if(!eraseMaskCtx) return;
+  const rect = c.getBoundingClientRect();
+  const x = clientX - rect.left;
+  const y = clientY - rect.top;
+
+  const size = Number(brushSizeEl.value);
+  const hardness = Number(brushHardEl.value); // 0..1 (0 soft, 1 hard)
+
+  // create radial gradient brush on temporary canvas for soft edges
+  const b = document.createElement('canvas');
+  const bs = Math.max(8, Math.ceil(size));
+  b.width = bs; b.height = bs;
+  const bctx = b.getContext('2d');
+
+  // gradient: center opaque white (we will use destination-out to erase)
+  const g = bctx.createRadialGradient(bs/2, bs/2, 0, bs/2, bs/2, bs/2);
+  // compute inner radius based on hardness (higher hardness => larger inner solid)
+  const inner = Math.max(0, Math.min(1, hardness));
+  g.addColorStop(0, 'rgba(0,0,0,1)');
+  // blend stop for softness
+  const stop = inner;
+  g.addColorStop(stop, 'rgba(0,0,0,1)');
+  g.addColorStop(1, 'rgba(0,0,0,0)');
+
+  // fill brush
+  bctx.clearRect(0,0,bs,bs);
+  bctx.fillStyle = g;
+  bctx.fillRect(0,0,bs,bs);
+
+  // draw radial gradient onto eraseMask using 'destination-out' to make transparent hole
+  eraseMaskCtx.save();
+  eraseMaskCtx.globalCompositeOperation = 'destination-out';
+  // draw centered
+  eraseMaskCtx.translate(0,0);
+  eraseMaskCtx.drawImage(b, x - bs/2, y - bs/2, bs, bs);
+  eraseMaskCtx.globalCompositeOperation = 'source-over';
+  eraseMaskCtx.restore();
+
+  draw(); // update canvas live
+}
+
+// Undo & Reset Erase handled earlier
+
+// sync sliders to pattern state
+[posX,posY,scaleEl,rotationEl,opacityEl].forEach(el=>{
   el.addEventListener('input', ()=>{
     patternState.x = Number(posX.value);
     patternState.y = Number(posY.value);
@@ -446,9 +615,9 @@ c.addEventListener('pointercancel', ()=>{ dragging=false; });
 // center/tile/reset
 centerBtn.addEventListener('click', ()=>{ patternState.x = c.width/2; patternState.y = c.height/2; syncUI(); draw(); });
 tileBtn.addEventListener('click', ()=>{ patternState.tiled = !patternState.tiled; tileBtn.textContent = patternState.tiled ? 'Tile: ON' : 'Toggle Tile'; draw(); });
-resetBtn.addEventListener('click', ()=>{ shirtImg=null; patternImg=null; maskCanvas=null; lumMap=null; patternState={x:c.width/2,y:c.height/2,scale:1,rot:0,alpha:1,tiled:false}; document.getElementById('shirtFile').value=''; document.getElementById('patternFile').value=''; syncUI(); draw(); });
+resetBtn.addEventListener('click', ()=>{ shirtImg=null; patternImg=null; maskCanvas=null; lumMap=null; patternState={x:c.width/2,y:c.height/2,scale:1,rot:0,alpha:1,tiled:false}; eraseMaskCtx.clearRect(0,0,eraseMask.width,eraseMask.height); eraseMaskCtx.fillStyle='white'; eraseMaskCtx.fillRect(0,0,eraseMask.width,eraseMask.height); undoStack.length=0; document.getElementById('shirtFile').value=''; document.getElementById('patternFile').value=''; syncUI(); draw(); });
 
-// DOWNLOAD (high-res, with mask)
+// download (high-res), apply eraseMask + shirt mask
 downloadBtn.addEventListener('click', ()=>{
   if(!shirtImg && !patternImg) return;
   const scaleFactor = 2;
@@ -457,7 +626,7 @@ downloadBtn.addEventListener('click', ()=>{
   tmp.height = c.height * scaleFactor;
   const tctx = tmp.getContext('2d');
 
-  // draw shirt (scaled)
+  // draw shirt scaled
   if(shirtImg) tctx.drawImage(shirtImg, 0, 0, tmp.width, tmp.height);
   else drawCheckerBackground(tctx, tmp.width, tmp.height);
 
@@ -482,35 +651,53 @@ downloadBtn.addEventListener('click', ()=>{
   }
   pctx.restore();
 
+  // if displacement disabled or no lumMap -> apply eraseMask & mask scaled and draw
   if(!displaceToggle.checked || !lumMap){
-    tctx.globalAlpha = patternState.alpha;
-    tctx.drawImage(pCanvas, 0, 0);
-    // apply mask (if png mask exists): draw mask scaled
+    // prepare high-res eraseMask scaled
+    const eScaled = document.createElement('canvas'); eScaled.width = tmp.width; eScaled.height = tmp.height;
+    const ectx = eScaled.getContext('2d');
+    // draw eraseMask scaled (eraseMask white=keep)
+    ectx.drawImage(eraseMask, 0, 0, tmp.width, tmp.height);
+    // apply onto pCanvas via destination-in
+    const temp = document.createElement('canvas'); temp.width = tmp.width; temp.height = tmp.height;
+    const t2 = temp.getContext('2d');
+    t2.drawImage(pCanvas, 0, 0);
+    t2.globalCompositeOperation = 'destination-in';
+    t2.drawImage(eScaled, 0, 0);
+    t2.globalCompositeOperation = 'source-over';
+    // apply shirt mask if exists scaled
     if(maskCanvas){
-      const mCanvas = document.createElement('canvas'); mCanvas.width = tmp.width; mCanvas.height = tmp.height;
-      const mctx = mCanvas.getContext('2d');
+      const mScaled = document.createElement('canvas'); mScaled.width = tmp.width; mScaled.height = tmp.height;
+      const mctx = mScaled.getContext('2d');
       mctx.drawImage(maskCanvas, 0, 0, tmp.width, tmp.height);
-      tctx.globalCompositeOperation = 'destination-in';
-      tctx.drawImage(mCanvas, 0, 0);
-      tctx.globalCompositeOperation = 'source-over';
+      t2.globalCompositeOperation = 'destination-in';
+      t2.drawImage(mScaled, 0, 0);
+      t2.globalCompositeOperation = 'source-over';
     }
+    // blend onto tmp
+    tctx.globalAlpha = patternState.alpha;
+    tctx.globalCompositeOperation = 'multiply';
+    tctx.drawImage(temp, 0, 0);
+    tctx.globalCompositeOperation = 'source-over';
     tctx.globalAlpha = 1;
+
     const link = document.createElement('a'); link.download = 'mockup.png'; link.href = tmp.toDataURL('image/png'); link.click();
     return;
   }
 
-  // displacement high-res: scale luminance
+  // displacement high-res
   const scaledLum = scaleLumMap(lumMap, c.width, c.height, tmp.width, tmp.height);
 
+  // pctx for high-res pattern is already pctx; get pixels
   const pw = pCanvas.width, ph = pCanvas.height;
-  const pData = pctx.getImageData(0,0,pw,ph).data;
+  const pDataHR = pctx.getImageData(0,0,pw,ph).data;
   const displacedHR = document.createElement('canvas'); displacedHR.width = pw; displacedHR.height = ph;
   const dctxHR = displacedHR.getContext('2d');
-  const out = dctxHR.createImageData(pw,ph);
-  const outData = out.data;
+  const outHR = dctxHR.createImageData(pw,ph);
+  const outDataHR = outHR.data;
   const strength = Number(displaceStrength.value);
 
-  // gradient
+  // compute gradient for scaledLum
   const gx = new Float32Array(pw*ph);
   const gy = new Float32Array(pw*ph);
   for(let y=0;y<ph;y++){
@@ -534,35 +721,44 @@ downloadBtn.addEventListener('click', ()=>{
       if(sx<0) sx=0; if(sx>=pw) sx=pw-1;
       if(sy<0) sy=0; if(sy>=ph) sy=ph-1;
       const si = (sy*pw + sx)*4, oi = i*4;
-      outData[oi] = pData[si]; outData[oi+1] = pData[si+1]; outData[oi+2] = pData[si+2]; outData[oi+3] = pData[si+3];
+      outDataHR[oi] = pDataHR[si]; outDataHR[oi+1] = pDataHR[si+1]; outDataHR[oi+2] = pDataHR[si+2]; outDataHR[oi+3] = pDataHR[si+3];
     }
   }
-  dctxHR.putImageData(out, 0, 0);
+  dctxHR.putImageData(outHR, 0, 0);
 
-  // blend displacedHR onto tmp (shirt already drawn)
+  // apply eraseMask scaled and mask scaled
+  const eScaled = document.createElement('canvas'); eScaled.width = tmp.width; eScaled.height = tmp.height;
+  const ectx = eScaled.getContext('2d');
+  ectx.drawImage(eraseMask, 0, 0, tmp.width, tmp.height);
+
+  const mScaled = document.createElement('canvas'); mScaled.width = tmp.width; mScaled.height = tmp.height;
+  const mctx = mScaled.getContext('2d');
+  if(maskCanvas) mctx.drawImage(maskCanvas, 0, 0, tmp.width, tmp.height);
+
+  // combine: draw displacedHR into temp, apply eScaled, then mScaled
+  const temp2 = document.createElement('canvas'); temp2.width = tmp.width; temp2.height = tmp.height;
+  const tt = temp2.getContext('2d');
+  tt.drawImage(displacedHR, 0, 0, tmp.width, tmp.height);
+  tt.globalCompositeOperation = 'destination-in';
+  tt.drawImage(eScaled, 0, 0);
+  tt.globalCompositeOperation = 'source-over';
+  if(maskCanvas){
+    tt.globalCompositeOperation = 'destination-in';
+    tt.drawImage(mScaled, 0, 0);
+    tt.globalCompositeOperation = 'source-over';
+  }
+
+  // blend onto tmp (shirt already)
   tctx.globalAlpha = patternState.alpha;
   tctx.globalCompositeOperation = 'multiply';
-  tctx.drawImage(displacedHR, 0, 0);
+  tctx.drawImage(temp2, 0, 0);
   tctx.globalCompositeOperation = 'source-over';
   tctx.globalAlpha = 1;
 
-  // apply mask scaled to tmp size
-  if(maskCanvas){
-    const mCanvas = document.createElement('canvas'); mCanvas.width = tmp.width; mCanvas.height = tmp.height;
-    const mctx = mCanvas.getContext('2d');
-    mctx.drawImage(maskCanvas, 0, 0, tmp.width, tmp.height);
-    tctx.globalCompositeOperation = 'destination-in';
-    tctx.drawImage(mCanvas, 0, 0);
-    tctx.globalCompositeOperation = 'source-over';
-  }
-
-  const link = document.createElement('a');
-  link.download = 'mockup.png';
-  link.href = tmp.toDataURL('image/png');
-  link.click();
+  const link = document.createElement('a'); link.download = 'mockup.png'; link.href = tmp.toDataURL('image/png'); link.click();
 });
 
-// helper: scale luminance map (nearest)
+// helper: scale luminance map (nearest neighbor)
 function scaleLumMap(src, sw, sh, tw, th){
   if(!src) return null;
   const out = new Float32Array(tw*th);
@@ -576,9 +772,12 @@ function scaleLumMap(src, sw, sh, tw, th){
   return out;
 }
 
-// init
-function syncUI(){ posX.value = Math.round(patternState.x); posY.value = Math.round(patternState.y); scaleEl.value = patternState.scale; rotationEl.value = patternState.rot; opacityEl.value = patternState.alpha; }
-function init(){ syncUI(); draw(); }
+// init UI
+function init(){
+  ensureEraseMaskSize(c.width, c.height);
+  syncUI();
+  draw();
+}
 init();
 
 </script>
