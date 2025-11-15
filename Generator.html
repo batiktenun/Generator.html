@@ -3,526 +3,595 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Mockup — Smart Eraser Auto-Correct (Final)</title>
+<title>Mockup — AI Auto-Mask Brush (Hybrid)</title>
 <style>
 :root{--accent:#0b66ff}
-body{font-family:system-ui,-apple-system,Segoe UI,Roboto;display:flex;gap:14px;padding:14px;background:#f6f7fb;color:#0b0b0b}
-.panel{width:460px;background:#fff;border-radius:12px;box-shadow:0 6px 18px rgba(20,20,40,.08);padding:14px}
+body{font-family:system-ui,-apple-system,Segoe UI,Roboto;margin:0;padding:14px;background:#f6f7fb;color:#0b0b0b;display:flex;gap:14px}
+.panel{width:420px;background:#fff;border-radius:12px;box-shadow:0 6px 18px rgba(20,20,40,.08);padding:14px}
 .preview-wrap{flex:1;display:flex;flex-direction:column;gap:12px}
 .preview{display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#fff,#fafafa);padding:12px;border-radius:12px}
-canvas{background:#fff;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.06);max-width:100%;height:auto;touch-action: none}
+canvas{background:#fff;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.06);max-width:100%;height:auto;touch-action:none}
 label{display:block;font-size:13px;margin-top:10px;color:#444}
 .row{display:flex;gap:8px;align-items:center}
-.controls-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:center}
-input[type=range]{width:100%}
-button{background:var(--accent);color:#fff;border:0;padding:8px 10px;border-radius:8px;cursor:pointer}
+button{background:var(--accent);color:#fff;border:0;padding:9px 12px;border-radius:8px;cursor:pointer}
 .small{font-size:12px;color:#666}
-.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
-.step{background:#e6eefc;border:1px solid #d0e4ff;color:#0b66ff;padding:6px 8px;border-radius:6px;cursor:pointer}
-.badge{background:#f1f5f9;padding:6px 8px;border-radius:8px;font-size:12px}
 .footer{font-size:12px;color:#666;margin-top:12px;text-align:center}
-.mt-indicator{position:fixed;right:18px;bottom:18px;background:#111;color:#fff;padding:8px 10px;border-radius:10px;opacity:0.0;transition:opacity .2s;font-size:13px}
+.mt-indicator{position:fixed;right:18px;bottom:18px;background:#111;color:#fff;padding:8px 10px;border-radius:10px;opacity:0;transition:opacity .18s;font-size:13px}
 </style>
 </head>
 <body>
 
 <div class="panel">
-  <h3>Mockup — Smart Eraser (Auto-Correct)</h3>
-  <div class="small">Auto-Correct Eraser: sapuan otomatis menempel ke tepi baju (PNG alpha). Pinch zoom native aman.</div>
+  <h3>Mockup — AI Auto-Mask Brush (Hybrid)</h3>
+  <div class="small">Cukup sapu: brush otomatis memilih area yang relevan (tanpa slider). Gunakan PNG baju transparan.</div>
 
-  <label>Upload Baju (PNG transparan)</label>
+  <label>1) Upload Baju (PNG transparan)</label>
   <input id="shirtFile" type="file" accept="image/*">
 
-  <label>Upload Motif</label>
+  <label>2) Upload Motif</label>
   <input id="patternFile" type="file" accept="image/*">
 
-  <label style="margin-top:10px">Transform (gunakan +/- untuk presisi)</label>
-
-  <div class="row">
-    <span style="width:56px">Pos X</span>
-    <button class="step" data-target="posX" data-step="-10">−</button>
-    <input id="posX" type="range" min="-2000" max="2000" value="450">
-    <button class="step" data-target="posX" data-step="10">+</button>
+  <div style="margin-top:10px" class="row">
+    <button id="eraserBtn">Eraser (Auto)</button>
+    <button id="undoBtn" style="background:#f39c12;margin-left:8px">Undo</button>
+    <button id="resetEraseBtn" style="background:#e53e3e;margin-left:8px">Reset Erase</button>
   </div>
 
-  <div class="row">
-    <span style="width:56px">Pos Y</span>
-    <button class="step" data-target="posY" data-step="-10">−</button>
-    <input id="posY" type="range" min="-2000" max="2000" value="550">
-    <button class="step" data-target="posY" data-step="10">+</button>
-  </div>
-
-  <div class="row">
-    <span style="width:56px">Scale</span>
-    <button class="step" data-target="scale" data-step="-0.05">−</button>
-    <input id="scale" type="range" min="0.1" max="5" step="0.01" value="1">
-    <button class="step" data-target="scale" data-step="0.05">+</button>
-  </div>
-
-  <div class="row">
-    <span style="width:56px">Rot</span>
-    <button class="step" data-target="rotation" data-step="-1">−</button>
-    <input id="rotation" type="range" min="-180" max="180" value="0">
-    <button class="step" data-target="rotation" data-step="1">+</button>
-  </div>
-
-  <div class="row">
-    <span style="width:56px">Opacity</span>
-    <button class="step" data-target="opacity" data-step="-0.01">−</button>
-    <input id="opacity" type="range" min="0" max="1" step="0.01" value="1">
-    <button class="step" data-target="opacity" data-step="0.01">+</button>
-  </div>
-
-  <div class="controls-grid" style="margin-top:8px">
-    <div><button id="centerBtn" style="width:100%">Center</button></div>
-    <div><button id="tileBtn" style="width:100%">Toggle Tile</button></div>
-  </div>
-
-  <label style="margin-top:10px">Displacement</label>
-  <div class="row">
-    <div style="display:flex;align-items:center;gap:8px"><input id="displaceToggle" type="checkbox"><span class="small">Aktifkan</span></div>
-    <div style="flex:1;display:flex;align-items:center;gap:8px">
-      <button class="step" data-target="displaceStrength" data-step="-1">−</button>
-      <input id="displaceStrength" type="range" min="0" max="120" value="18">
-      <button class="step" data-target="displaceStrength" data-step="1">+</button>
-    </div>
-  </div>
-
-  <label style="margin-top:10px">Smart Eraser (Auto-Correct)</label>
-  <div class="toolbar">
-    <button id="eraserBtn">Eraser</button>
-    <div class="badge">Size <button class="step" data-target="brushSize" data-step="-4">−</button>
-      <input id="brushSize" type="range" min="4" max="200" value="40" style="vertical-align:middle;width:110px">
-      <button class="step" data-target="brushSize" data-step="4">+</button>
-    </div>
-    <div class="badge">Hard <button class="step" data-target="brushHard" data-step="-0.05">−</button>
-      <input id="brushHard" type="range" min="0" max="1" step="0.01" value="0.6" style="vertical-align:middle;width:110px">
-      <button class="step" data-target="brushHard" data-step="0.05">+</button>
-    </div>
-
-    <div class="badge">Snap Dist <button class="step" data-target="snapDist" data-step="-8">−</button>
-      <input id="snapDist" type="range" min="4" max="300" step="4" value="80" style="vertical-align:middle;width:110px">
-      <button class="step" data-target="snapDist" data-step="8">+</button>
-    </div>
-
-    <div class="badge">Sensitivity <button class="step" data-target="sensitivity" data-step="-0.05">−</button>
-      <input id="sensitivity" type="range" min="0.05" max="1" step="0.05" value="0.9" style="vertical-align:middle;width:110px">
-      <button class="step" data-target="sensitivity" data-step="0.05">+</button>
-    </div>
-
-    <button id="undoBtn" style="background:#f39c12">Undo</button>
-    <button id="resetEraseBtn" style="background:#e53e3e">Reset Erase</button>
-  </div>
-
-  <label style="margin-top:10px">Actions</label>
-  <div class="row">
+  <div style="margin-top:10px" class="row">
     <button id="downloadBtn">Download PNG</button>
-    <button id="resetBtn" style="background:#eee;color:#111">Reset All</button>
+    <button id="resetBtn" style="background:#eee;color:#111;margin-left:8px">Reset All</button>
   </div>
 
-  <div class="small" style="margin-top:8px">Tip: saat pinch-zoom (lebih dari 1 sentuhan) eraser otomatis nonaktif. Snap Dist = jarak maksimum pencarian tepi.</div>
-  <div class="footer">Copy–paste file ini ke index.html di GitHub — siap pakai.</div>
+  <div class="small" style="margin-top:10px">Tip: saat pinch-zoom (lebih dari 1 sentuhan) eraser otomatis nonaktif. Jika brush tidak menghapus, berarti area tidak terdeteksi berbeda (aman).</div>
+  <div class="footer">Copy–paste file ini ke index.html — siap pakai.</div>
 </div>
 
 <div class="preview-wrap">
   <div class="preview">
-    <canvas id="c" width="900" height="1100" aria-label="mockup canvas"></canvas>
+    <canvas id="c" width="900" height="1100" aria-label="mockup-canvas"></canvas>
   </div>
   <div style="display:flex;gap:12px;align-items:flex-start">
-    <div><div class="small">Live Preview</div><img id="livePreview" style="width:220px;border-radius:8px;border:1px solid #eee;background:#fff;margin-top:6px"></div>
-    <div><div class="small">Small Preview</div><img id="smallPreview" style="width:140px;border-radius:8px;border:1px solid #eee;background:#fff;margin-top:6px"></div>
+    <div style="width:220px"><div class="small">Live Preview</div><img id="livePreview" style="width:220px;border-radius:8px;border:1px solid #eee;background:#fff;margin-top:6px"></div>
+    <div style="width:140px"><div class="small">Small Preview</div><img id="smallPreview" style="width:140px;border-radius:8px;border:1px solid #eee;background:#fff;margin-top:6px"></div>
   </div>
 </div>
 
 <div id="mtIndicator" class="mt-indicator">Multi-touch — Eraser disabled</div>
 
 <script>
-/* Smart Eraser Auto-Correct (Full)
-   - Auto-snap to nearest edge (Sobel) computed from shirt alpha mask
-   - Adaptive radius & feather (radial gradient)
-   - Sensitivity controls + snap distance
-   - Multi-touch safe: when >1 pointer active, eraser disabled (pinch-zoom allowed)
+/* AI Auto-Mask Brush (Hybrid/Auto)
+   - Hybrid logic (k-means k=2 on local patch + flood-fill by color similarity)
+   - No extra tunables (snap distance / sensitivity removed)
+   - Multi-touch safe (pinch zoom allowed)
+   - Undo stack, Reset, Download high-res
 */
 
-const c = document.getElementById('c'), ctx = c.getContext('2d');
-let shirtImg=null, patternImg=null, maskCanvas=null, lumMap=null, edgeMap=null;
-let patternState = { x: c.width/2, y: c.height/2, scale:1, rot:0, alpha:1, tiled:false };
-
-// erase mask canvas (white = keep motif; transparent = erased)
-const eraseMask = document.createElement('canvas');
-let eraseMaskCtx = eraseMask.getContext('2d');
-const undoStack = []; const UNDO_LIMIT = 20;
-
-// pointer tracking
-const activePointers = new Set();
-let eraserMode = true; let isErasing=false, dragging=false, dragOffset={x:0,y:0}, lastPointerId=null;
-
-// UI refs
+// DOM
+const canvas = document.getElementById('c'), ctx = canvas.getContext('2d');
 const shirtFile = document.getElementById('shirtFile'), patternFile = document.getElementById('patternFile');
-const posX = document.getElementById('posX'), posY = document.getElementById('posY'), scaleEl = document.getElementById('scale');
-const rotationEl = document.getElementById('rotation'), opacityEl = document.getElementById('opacity');
-const centerBtn = document.getElementById('centerBtn'), tileBtn = document.getElementById('tileBtn');
-const displaceToggle = document.getElementById('displaceToggle'), displaceStrength = document.getElementById('displaceStrength');
-const eraserBtn = document.getElementById('eraserBtn'), brushSizeEl = document.getElementById('brushSize');
-const brushHardEl = document.getElementById('brushHard'), snapDistEl = document.getElementById('snapDist'), sensitivityEl = document.getElementById('sensitivity');
-const undoBtn = document.getElementById('undoBtn'), resetEraseBtn = document.getElementById('resetEraseBtn');
+const eraserBtn = document.getElementById('eraserBtn'), undoBtn = document.getElementById('undoBtn'), resetEraseBtn = document.getElementById('resetEraseBtn');
 const downloadBtn = document.getElementById('downloadBtn'), resetBtn = document.getElementById('resetBtn');
 const livePreview = document.getElementById('livePreview'), smallPreview = document.getElementById('smallPreview');
 const mtIndicator = document.getElementById('mtIndicator');
 
-// init
-undoBtn.disabled = true;
-function ensureEraseMaskSize(w,h){ if(eraseMask.width!==w||eraseMask.height!==h){ eraseMask.width=w; eraseMask.height=h; eraseMaskCtx = eraseMask.getContext('2d'); eraseMaskCtx.clearRect(0,0,w,h); eraseMaskCtx.fillStyle='white'; eraseMaskCtx.fillRect(0,0,w,h); undoStack.length=0; undoBtn.disabled=true; } }
+let shirtImg = null, patternImg = null;
+let maskCanvas = null, lumMap = null, edgeMap = null;
+let patternState = { x: canvas.width/2, y: canvas.height/2, scale:1, rot:0, alpha:1, tiled:false };
 
-// load image util
-function loadImageFromFile(file, cb){ const r = new FileReader(); r.onload = e=>{ const img=new Image(); img.onload = ()=>cb(img); img.src = e.target.result; }; r.readAsDataURL(file); }
+// erase mask: white = keep motif; transparent = erased
+const eraseMask = document.createElement('canvas');
+let eraseMaskCtx = eraseMask.getContext('2d');
 
-// file events
-shirtFile.addEventListener('change', e=>{ const f=e.target.files[0]; if(!f) return; loadImageFromFile(f, img=>{ shirtImg=img; fitCanvasToShirt(); generateMaskFromShirt(); computeLuminanceMap(); computeEdgeMap(); ensureEraseMaskSize(c.width,c.height); draw(); }); });
-patternFile.addEventListener('change', e=>{ const f=e.target.files[0]; if(!f) return; loadImageFromFile(f, img=>{ patternImg=img; patternState.x=c.width/2; patternState.y=c.height/2; patternState.scale=1; patternState.rot=0; patternState.alpha=1; patternState.tiled=false; syncUI(); ensureEraseMaskSize(c.width,c.height); draw(); }); });
+// undo
+const undoStack = []; const UNDO_LIMIT = 20;
 
-// fit canvas size
-function fitCanvasToShirt(){ if(!shirtImg) return; const maxW=1400, maxH=1700; let w=shirtImg.naturalWidth||shirtImg.width, h=shirtImg.naturalHeight||shirtImg.height; const ratio=Math.min(maxW/w, maxH/h, 1); c.width=Math.round(w*ratio); c.height=Math.round(h*ratio); ensureEraseMaskSize(c.width,c.height); if(!patternImg){ patternState.x=c.width/2; patternState.y=c.height/2; } syncUI(); }
+// pointer tracking for multitouch
+const activePointers = new Set();
+let eraserOn = true;
+let isErasing = false, lastPointerId = null, dragging = false, dragOffset = {x:0,y:0};
 
-// generate mask from shirt alpha (white where shirt exists)
-function generateMaskFromShirt(){ if(!shirtImg){ maskCanvas=null; return; } const tmp=document.createElement('canvas'); tmp.width=c.width; tmp.height=c.height; const tctx=tmp.getContext('2d'); tctx.clearRect(0,0,tmp.width,tmp.height); tctx.drawImage(shirtImg,0,0,tmp.width,tmp.height); const id=tctx.getImageData(0,0,tmp.width,tmp.height).data; const mask=document.createElement('canvas'); mask.width=tmp.width; mask.height=tmp.height; const mctx=mask.getContext('2d'); const mImg=mctx.createImageData(tmp.width,tmp.height); const mData=mImg.data; const TH=10; for(let i=0;i<id.length;i+=4){ const a=id[i+3]; if(a>TH){ mData[i]=255; mData[i+1]=255; mData[i+2]=255; mData[i+3]=255; } else { mData[i]=0; mData[i+1]=0; mData[i+2]=0; mData[i+3]=0; } } mctx.putImageData(mImg,0,0); maskCanvas = mask; }
+// helpers
+function ensureEraseMaskSize(w,h){
+  if(eraseMask.width !== w || eraseMask.height !== h){
+    eraseMask.width = w; eraseMask.height = h;
+    eraseMaskCtx = eraseMask.getContext('2d');
+    eraseMaskCtx.clearRect(0,0,w,h);
+    eraseMaskCtx.fillStyle = 'white';
+    eraseMaskCtx.fillRect(0,0,w,h);
+    undoStack.length = 0; undoBtn.disabled = true;
+  }
+}
+
+function loadImageFromFile(file, cb){
+  const r = new FileReader();
+  r.onload = e=>{
+    const img = new Image();
+    img.onload = ()=>cb(img);
+    img.src = e.target.result;
+  };
+  r.readAsDataURL(file);
+}
+
+// file listeners
+shirtFile.addEventListener('change', e=>{
+  const f = e.target.files[0]; if(!f) return;
+  loadImageFromFile(f, img=>{
+    shirtImg = img; fitCanvasToShirt(); generateMaskFromShirt(); computeLuminanceMap(); computeEdgeMap();
+    ensureEraseMaskSize(canvas.width, canvas.height); draw();
+  });
+});
+patternFile.addEventListener('change', e=>{
+  const f = e.target.files[0]; if(!f) return;
+  loadImageFromFile(f, img=>{
+    patternImg = img; patternState.x = canvas.width/2; patternState.y = canvas.height/2; patternState.scale = 1; patternState.rot = 0; patternState.alpha = 1; patternState.tiled = false;
+    ensureEraseMaskSize(canvas.width, canvas.height); draw();
+  });
+});
+
+// adapt canvas to shirt size
+function fitCanvasToShirt(){
+  if(!shirtImg) return;
+  const maxW = 1400, maxH = 1700;
+  let w = shirtImg.naturalWidth || shirtImg.width;
+  let h = shirtImg.naturalHeight || shirtImg.height;
+  const ratio = Math.min(maxW/w, maxH/h, 1);
+  canvas.width = Math.round(w*ratio);
+  canvas.height = Math.round(h*ratio);
+  ensureEraseMaskSize(canvas.width, canvas.height);
+  if(!patternImg) { patternState.x = canvas.width/2; patternState.y = canvas.height/2; }
+}
+
+// produce mask from shirt alpha
+function generateMaskFromShirt(){
+  if(!shirtImg){ maskCanvas = null; return; }
+  const tmp = document.createElement('canvas'); tmp.width = canvas.width; tmp.height = canvas.height;
+  const tctx = tmp.getContext('2d'); tctx.clearRect(0,0,tmp.width,tmp.height); tctx.drawImage(shirtImg,0,0,tmp.width,tmp.height);
+  const id = tctx.getImageData(0,0,tmp.width,tmp.height).data;
+  const mask = document.createElement('canvas'); mask.width = tmp.width; mask.height = tmp.height;
+  const mctx = mask.getContext('2d'); const mImg = mctx.createImageData(tmp.width,tmp.height); const mData = mImg.data;
+  const TH = 10;
+  for(let i=0;i<id.length;i+=4){
+    const a = id[i+3];
+    if(a>TH){ mData[i]=255; mData[i+1]=255; mData[i+2]=255; mData[i+3]=255; } else { mData[i]=0; mData[i+1]=0; mData[i+2]=0; mData[i+3]=0; }
+  }
+  mctx.putImageData(mImg,0,0); maskCanvas = mask;
+}
 
 // luminance map for displacement
-function computeLuminanceMap(){ if(!shirtImg){ lumMap=null; return; } const tmp=document.createElement('canvas'); tmp.width=c.width; tmp.height=c.height; const tctx=tmp.getContext('2d'); tctx.clearRect(0,0,tmp.width,tmp.height); tctx.drawImage(shirtImg,0,0,tmp.width,tmp.height); const id=tctx.getImageData(0,0,tmp.width,tmp.height).data; lumMap = new Float32Array(tmp.width*tmp.height); for(let i=0,j=0;i<id.length;i+=4,j++){ lumMap[j] = (0.2126*id[i] + 0.7152*id[i+1] + 0.0722*id[i+2]) / 255; } lumMap = boxBlurFloat(lumMap,tmp.width,tmp.height,2); }
+function computeLuminanceMap(){
+  if(!shirtImg){ lumMap = null; return; }
+  const tmp = document.createElement('canvas'); tmp.width = canvas.width; tmp.height = canvas.height;
+  const tctx = tmp.getContext('2d'); tctx.drawImage(shirtImg,0,0,tmp.width,tmp.height);
+  const id = tctx.getImageData(0,0,tmp.width,tmp.height).data;
+  lumMap = new Float32Array(tmp.width * tmp.height);
+  for(let i=0, j=0; i<id.length; i+=4, j++){
+    lumMap[j] = (0.2126*id[i] + 0.7152*id[i+1] + 0.0722*id[i+2]) / 255;
+  }
+  lumMap = boxBlurFloat(lumMap, tmp.width, tmp.height, 2);
+}
 
-// simple box blur
-function boxBlurFloat(arr,w,h,radius){ if(radius<1) return arr; const tmp=new Float32Array(arr.length); for(let y=0;y<h;y++) for(let x=0;x<w;x++){ let sum=0,cnt=0; for(let k=-radius;k<=radius;k++){ const xx=x+k; if(xx>=0&&xx<w){ sum+=arr[y*w+xx]; cnt++; } } tmp[y*w+x] = sum/cnt; } const out=new Float32Array(arr.length); for(let x=0;x<w;x++) for(let y=0;y<h;y++){ let sum=0,cnt=0; for(let k=-radius;k<=radius;k++){ const yy=y+k; if(yy>=0&&yy<h){ sum+=tmp[yy*w+x]; cnt++; } } out[y*w+x] = sum/cnt; } return out; }
+function boxBlurFloat(arr,w,h,radius){
+  if(radius < 1) return arr;
+  const tmp = new Float32Array(arr.length);
+  for(let y=0;y<h;y++){
+    for(let x=0;x<w;x++){
+      let sum=0,cnt=0;
+      for(let k=-radius;k<=radius;k++){ const xx=x+k; if(xx>=0 && xx<w){ sum += arr[y*w + xx]; cnt++; } }
+      tmp[y*w + x] = sum / cnt;
+    }
+  }
+  const out = new Float32Array(arr.length);
+  for(let x=0;x<w;x++){
+    for(let y=0;y<h;y++){
+      let sum=0,cnt=0;
+      for(let k=-radius;k<=radius;k++){ const yy=y+k; if(yy>=0 && yy<h){ sum += tmp[yy*w + x]; cnt++; } }
+      out[y*w + x] = sum / cnt;
+    }
+  }
+  return out;
+}
 
-// Sobel edge detection on maskCanvas -> edgeMap holds gradient magnitude (0..~)
-// We compute once when mask updated
+// compute simple Sobel edge on mask alpha
 function computeEdgeMap(){
   if(!maskCanvas){ edgeMap = null; return; }
   const w = maskCanvas.width, h = maskCanvas.height;
-  const tctx = maskCanvas.getContext('2d');
-  const id = tctx.getImageData(0,0,w,h).data;
+  const tctx = maskCanvas.getContext('2d'); const id = tctx.getImageData(0,0,w,h).data;
   edgeMap = new Float32Array(w*h);
-  // Sobel kernels
   for(let y=1;y<h-1;y++){
     for(let x=1;x<w-1;x++){
-      const i = (y*w + x)*4;
-      // grab neighbor luminance from mask alpha (since mask is white/transparent)
-      // faster: sample alpha channel directly
-      // compute horizontal and vertical gradients
       const tl = id[((y-1)*w + (x-1))*4 + 3];
-      const  t = id[((y-1)*w + x)*4 + 3];
+      const t = id[((y-1)*w + x)*4 + 3];
       const tr = id[((y-1)*w + (x+1))*4 + 3];
       const l  = id[(y*w + (x-1))*4 + 3];
       const r  = id[(y*w + (x+1))*4 + 3];
       const bl = id[((y+1)*w + (x-1))*4 + 3];
       const b  = id[((y+1)*w + x)*4 + 3];
       const br = id[((y+1)*w + (x+1))*4 + 3];
-      // Sobel gx, gy
       const gx = (tr + 2*r + br) - (tl + 2*l + bl);
       const gy = (bl + 2*b + br) - (tl + 2*t + tr);
-      const mag = Math.sqrt(gx*gx + gy*gy);
-      edgeMap[y*w + x] = mag;
+      edgeMap[y*w + x] = Math.sqrt(gx*gx + gy*gy);
     }
   }
-  // optional blur to smooth edge peaks
-  // small blur
   edgeMap = boxBlurFloat(edgeMap, w, h, 1);
 }
 
-// find nearest strong edge within maxDist around point (pointer coords in canvas space)
-// returns {x,y,score} or null
-function findNearestEdge(cx,cy,maxDist,threshold=20){
-  if(!edgeMap || !maskCanvas) return null;
-  const w = maskCanvas.width, h = maskCanvas.height;
-  const md = Math.max(1, Math.round(maxDist));
-  const minX = Math.max(1, Math.floor(cx - md));
-  const maxX = Math.min(w-2, Math.ceil(cx + md));
-  const minY = Math.max(1, Math.floor(cy - md));
-  const maxY = Math.min(h-2, Math.ceil(cy + md));
-  let best = null;
-  // search with step for speed; step adaptively larger for big radii
-  const step = Math.max(1, Math.floor(md / 30));
-  for(let y=minY; y<=maxY; y+=step){
-    const dy = y - cy;
-    for(let x=minX; x<=maxX; x+=step){
-      const dx = x - cx;
-      const d2 = dx*dx + dy*dy;
-      if(d2 > md*md) continue;
-      const score = edgeMap[y*w + x];
-      if(score < threshold) continue;
-      if(!best || score > best.score){
-        best = {x, y, score, dist: Math.sqrt(d2)};
-      }
-    }
-  }
-  // if found, refine around best with smaller step to get better position
-  if(best){
-    const refine = 6;
-    let bx = best.x, by = best.y;
-    let bscore = best.score;
-    for(let ry=Math.max(1,by-refine); ry<=Math.min(h-2,by+refine); ry++){
-      for(let rx=Math.max(1,bx-refine); rx<=Math.min(w-2,bx+refine); rx++){
-        const dx = rx - cx, dy = ry - cy;
-        if(dx*dx + dy*dy > md*md) continue;
-        const s = edgeMap[ry*w + rx];
-        if(s > bscore){ bscore = s; bx = rx; by = ry; }
-      }
-    }
-    return {x: bx, y: by, score: bscore};
-  }
-  return null;
-}
-
-// DRAW pipeline (same pattern -> displacement -> apply erase mask -> apply shirt mask -> blend)
+// draw pipeline
 function draw(){
-  ctx.clearRect(0,0,c.width,c.height);
-  if(shirtImg) ctx.drawImage(shirtImg,0,0,c.width,c.height); else drawCheckerBackground(ctx,c.width,c.height);
-  if(!patternImg){ updatePreviews(); return; }
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  if(shirtImg) ctx.drawImage(shirtImg,0,0,canvas.width,canvas.height); else drawChecker(ctx,canvas.width,canvas.height);
+  if(!patternImg){ updatePreview(); return; }
 
-  const pw=c.width, ph=c.height;
-  const patternCanvas=document.createElement('canvas'); patternCanvas.width=pw; patternCanvas.height=ph;
-  const pctx = patternCanvas.getContext('2d'); pctx.clearRect(0,0,pw,ph);
-
-  // draw transformed pattern
+  // build pattern canvas
+  const pw = canvas.width, ph = canvas.height;
+  const patternCanvas = document.createElement('canvas'); patternCanvas.width = pw; patternCanvas.height = ph;
+  const pctx = patternCanvas.getContext('2d');
   pctx.save(); pctx.translate(patternState.x, patternState.y); pctx.rotate(patternState.rot*Math.PI/180); pctx.scale(patternState.scale, patternState.scale);
   if(patternState.tiled){
-    const patt = pctx.createPattern(patternImg,'repeat'); pctx.fillStyle = patt;
-    const fillW = pw*(1/patternState.scale)+1000, fillH = ph*(1/patternState.scale)+1000;
-    pctx.fillRect(-fillW/2, -fillH/2, fillW, fillH);
+    const patt = pctx.createPattern(patternImg, 'repeat'); pctx.fillStyle = patt; pctx.fillRect(-pw*2, -ph*2, pw*4, ph*4);
   } else {
     const w = patternImg.naturalWidth || patternImg.width, h = patternImg.naturalHeight || patternImg.height;
     const defaultScale = Math.min((pw*0.6)/w, (ph*0.6)/h);
-    const drawW = w*defaultScale, drawH = h*defaultScale;
-    pctx.drawImage(patternImg, -drawW/2, -drawH/2, drawW, drawH);
+    pctx.drawImage(patternImg, -w*defaultScale/2, -h*defaultScale/2, w*defaultScale, h*defaultScale);
   }
   pctx.restore();
 
-  // if no displacement or no lumMap -> just apply eraseMask & shirt mask and blend
+  // displacement path (if enabled)
   if(!displaceToggle.checked || !lumMap){
-    const tmp = document.createElement('canvas'); tmp.width=pw; tmp.height=ph; const tctx = tmp.getContext('2d');
+    // apply eraseMask & shirt mask
+    const tmp = document.createElement('canvas'); tmp.width = pw; tmp.height = ph; const tctx = tmp.getContext('2d');
     tctx.drawImage(pctx.canvas, 0, 0);
-    if(eraseMask.width && eraseMask.height){ tctx.globalCompositeOperation = 'destination-in'; tctx.drawImage(eraseMask,0,0); tctx.globalCompositeOperation='source-over'; }
+    if(eraseMask.width && eraseMask.height){ tctx.globalCompositeOperation='destination-in'; tctx.drawImage(eraseMask,0,0); tctx.globalCompositeOperation='source-over'; }
     if(maskCanvas){ tctx.globalCompositeOperation='destination-in'; tctx.drawImage(maskCanvas,0,0); tctx.globalCompositeOperation='source-over'; }
-    ctx.globalAlpha = patternState.alpha; ctx.globalCompositeOperation='multiply'; ctx.drawImage(tmp,0,0); ctx.globalCompositeOperation='source-over'; ctx.globalAlpha=1;
-    updatePreviews(); return;
+    ctx.globalAlpha = patternState.alpha; ctx.globalCompositeOperation='multiply'; ctx.drawImage(tmp,0,0); ctx.globalCompositeOperation='source-over'; ctx.globalAlpha = 1;
+    updatePreview(); return;
   }
 
-  // displacement path (same as previous)
+  // simplified displacement (nearest) - as earlier
   const pData = pctx.getImageData(0,0,pw,ph).data;
-  const displaced = document.createElement('canvas'); displaced.width=pw; displaced.height=ph; const dctx = displaced.getContext('2d');
+  const displaced = document.createElement('canvas'); displaced.width = pw; displaced.height = ph; const dctx = displaced.getContext('2d');
   const out = dctx.createImageData(pw,ph); const outData = out.data; const strength = Number(displaceStrength.value);
   const gx = new Float32Array(pw*ph), gy = new Float32Array(pw*ph);
   for(let y=0;y<ph;y++) for(let x=0;x<pw;x++){ const i=y*pw+x; const left = x>0?lumMap[i-1]:lumMap[i]; const right = x<pw-1?lumMap[i+1]:lumMap[i]; const top = y>0?lumMap[i-pw]:lumMap[i]; const bottom = y<ph-1?lumMap[i+pw]:lumMap[i]; gx[i]=right-left; gy[i]=bottom-top; }
-  for(let y=0;y<ph;y++) for(let x=0;x<pw;x++){ const i=y*pw+x; const dx = -gx[i]*(strength/50); const dy = -gy[i]*(strength/50); let sx=Math.round(x+dx), sy=Math.round(y+dy); if(sx<0) sx=0; if(sx>=pw) sx=pw-1; if(sy<0) sy=0; if(sy>=ph) sy=ph-1; const si=(sy*pw+sx)*4, oi=i*4; outData[oi]=pData[si]; outData[oi+1]=pData[si+1]; outData[oi+2]=pData[si+2]; outData[oi+3]=pData[si+3]; }
+  for(let y=0;y<ph;y++) for(let x=0;x<pw;x++){ const i=y*pw+x; const dx=-gx[i]*(strength/50); const dy=-gy[i]*(strength/50); let sx=Math.round(x+dx), sy=Math.round(y+dy); if(sx<0) sx=0; if(sx>=pw) sx=pw-1; if(sy<0) sy=0; if(sy>=ph) sy=ph-1; const si=(sy*pw+sx)*4, oi=i*4; outData[oi]=pData[si]; outData[oi+1]=pData[si+1]; outData[oi+2]=pData[si+2]; outData[oi+3]=pData[si+3]; }
   dctx.putImageData(out,0,0);
 
-  // apply eraseMask + shirt mask on displaced
-  const tmp2 = document.createElement('canvas'); tmp2.width=pw; tmp2.height=ph; const t2 = tmp2.getContext('2d');
+  // apply erase mask + shirt mask
+  const tmp2 = document.createElement('canvas'); tmp2.width = pw; tmp2.height = ph; const t2 = tmp2.getContext('2d');
   t2.drawImage(displaced,0,0);
   if(eraseMask.width && eraseMask.height){ t2.globalCompositeOperation='destination-in'; t2.drawImage(eraseMask,0,0); t2.globalCompositeOperation='source-over'; }
   if(maskCanvas){ t2.globalCompositeOperation='destination-in'; t2.drawImage(maskCanvas,0,0); t2.globalCompositeOperation='source-over'; }
-
   ctx.globalAlpha = patternState.alpha; ctx.globalCompositeOperation='multiply'; ctx.drawImage(tmp2,0,0); ctx.globalCompositeOperation='source-over'; ctx.globalAlpha=1;
-  updatePreviews();
+  updatePreview();
 }
 
-// update previews
-function updatePreviews(){ try{ const data=c.toDataURL('image/png'); livePreview.src=data; smallPreview.src=data; }catch(e){} }
-function drawCheckerBackground(ctx,w,h){ const size=16; for(let y=0;y<h;y+=size) for(let x=0;x<w;x+=size){ const even = ((x/size)+(y/size))%2===0; ctx.fillStyle = even ? '#f8f8f8' : '#efefef'; ctx.fillRect(x,y,size,size); } }
-function syncUI(){ posX.value=Math.round(patternState.x); posY.value=Math.round(patternState.y); scaleEl.value=patternState.scale; rotationEl.value=patternState.rot; opacityEl.value=patternState.alpha; }
+function updatePreview(){ try{ const data = canvas.toDataURL('image/png'); livePreview.src = data; smallPreview.src = data; }catch(e){} }
+function drawChecker(cctx,w,h){ const size=16; for(let y=0;y<h;y+=size){ for(let x=0;x<w;x+=size){ const even = ((x/size)+(y/size))%2===0; cctx.fillStyle = even ? '#f8f8f8' : '#efefef'; cctx.fillRect(x,y,size,size); } } }
 
-// ERASER: undo, reset
-function pushUndo(){ try{ const data = eraseMaskCtx.getImageData(0,0,eraseMask.width,eraseMask.height); undoStack.push(data); if(undoStack.length>UNDO_LIMIT) undoStack.shift(); undoBtn.disabled=false; }catch(e){} }
-function undoErase(){ if(undoStack.length===0) return; const img = undoStack.pop(); eraseMaskCtx.putImageData(img,0,0); if(undoStack.length===0) undoBtn.disabled=true; draw(); }
-undoBtn.addEventListener('click', undoErase);
-resetEraseBtn.addEventListener('click', ()=>{ pushUndo(); eraseMaskCtx.clearRect(0,0,eraseMask.width,eraseMask.height); eraseMaskCtx.fillStyle='white'; eraseMaskCtx.fillRect(0,0,eraseMask.width,eraseMask.height); draw(); });
+// ---------- AI Brush core ----------
 
-// eraser toggle
-eraserBtn.addEventListener('click', ()=>{ eraserMode = !eraserMode; eraserBtn.style.background = eraserMode ? '#111' : '#666'; eraserBtn.textContent = eraserMode ? 'Eraser' : 'Paint'; });
-
-// pointer events with multi-touch safety & auto-correct snap
-c.addEventListener('pointerdown', e=>{
-  activePointers.add(e.pointerId);
-  updateMTIndicator();
-  if(activePointers.size > 1){
-    // multi-touch active: do not capture; disable erasing
-    isErasing=false; dragging=false; lastPointerId=null;
-    return;
-  }
-
-  const rect = c.getBoundingClientRect();
-  const x = e.clientX - rect.left, y = e.clientY - rect.top;
-
-  // if not eraser mode -> try drag motif
-  if(!eraserMode && patternImg){
-    const w = (patternImg.naturalWidth||patternImg.width) * Math.min((c.width*0.6)/(patternImg.naturalWidth||patternImg.width),(c.height*0.6)/(patternImg.naturalHeight||patternImg.height)) * patternState.scale;
-    const h = (patternImg.naturalHeight||patternImg.height) * Math.min((c.width*0.6)/(patternImg.naturalWidth||patternImg.width),(c.height*0.6)/(patternImg.naturalHeight||patternImg.height)) * patternState.scale;
-    const dx = x - patternState.x, dy = y - patternState.y;
-    const theta = -patternState.rot * Math.PI/180;
-    const rx = dx * Math.cos(theta) - dy * Math.sin(theta);
-    const ry = dx * Math.sin(theta) + dy * Math.cos(theta);
-    if(Math.abs(rx) <= w/2 + 20 && Math.abs(ry) <= h/2 + 20){
-      dragging = true; dragOffset.x = dx; dragOffset.y = dy; try{ c.setPointerCapture(e.pointerId); }catch(_){} lastPointerId = e.pointerId; return;
+// utility: sample patch around (cx,cy) with radius r and return pixel array {r,g,b,a,lum,x,y}
+function samplePatch(cx,cy,r){
+  const w = canvas.width, h = canvas.height;
+  const x0 = Math.max(0, Math.floor(cx - r)), y0 = Math.max(0, Math.floor(cy - r));
+  const x1 = Math.min(w-1, Math.ceil(cx + r)), y1 = Math.min(h-1, Math.ceil(cy + r));
+  const tw = x1 - x0 + 1, th = y1 - y0 + 1;
+  const tmp = document.createElement('canvas'); tmp.width = tw; tmp.height = th;
+  const tctx = tmp.getContext('2d');
+  // draw shirt if exists (for alpha) and pattern + displacement not needed for sampling important is shirt alpha & visual; sample from shirt + pattern combined could confuse; use shirt RGB+alpha and mask to compare
+  if(shirtImg) tctx.drawImage(shirtImg, 0, 0, canvas.width, canvas.height, -x0, -y0, canvas.width, canvas.height);
+  const id = tctx.getImageData(0,0,tw,th).data;
+  const arr = [];
+  for(let yy=0; yy<th; yy++){
+    for(let xx=0; xx<tw; xx++){
+      const i = (yy*tw + xx)*4;
+      const r = id[i], g = id[i+1], b = id[i+2], a = id[i+3];
+      const lum = 0.2126*r + 0.7152*g + 0.0722*b;
+      arr.push({r,g,b,a,lum,x:x0+xx,y:y0+yy});
     }
   }
-
-  // else start auto-correct erasing: push undo then start stroke
-  ensureEraseMaskSize(c.width,c.height);
-  pushUndo();
-  isErasing = true;
-  lastPointerId = e.pointerId;
-  try{ c.setPointerCapture(e.pointerId); }catch(_){} 
-  handleSmartEraseStroke(e.clientX, e.clientY);
-});
-
-c.addEventListener('pointermove', e=>{
-  // keep pointer set updated
-  if(!activePointers.has(e.pointerId)) activePointers.add(e.pointerId);
-  updateMTIndicator();
-  if(activePointers.size > 1){
-    // multi-touch active: ignore erasing moves and don't pan motif
-    return;
-  }
-
-  if(dragging && !eraserMode){
-    const rect = c.getBoundingClientRect(); const x = e.clientX - rect.left, y = e.clientY - rect.top;
-    patternState.x = x - dragOffset.x; patternState.y = y - dragOffset.y; syncUI(); draw(); return;
-  }
-
-  if(!isErasing || lastPointerId !== e.pointerId) return;
-  handleSmartEraseStroke(e.clientX, e.clientY);
-});
-
-c.addEventListener('pointerup', e=>{
-  activePointers.delete(e.pointerId);
-  updateMTIndicator();
-  if(lastPointerId === e.pointerId){
-    isErasing = false; dragging = false; try{ c.releasePointerCapture(e.pointerId); }catch(_){} lastPointerId = null;
-  }
-});
-c.addEventListener('pointercancel', e=>{ activePointers.delete(e.pointerId); updateMTIndicator(); isErasing=false; dragging=false; lastPointerId=null; });
-
-// show/hide multi-touch indicator
-let mtTimer = null;
-function updateMTIndicator(){
-  if(activePointers.size > 1){ mtIndicator.style.opacity = '1'; }
-  else { mtIndicator.style.opacity = '0'; }
+  return {arr, x0, y0, tw, th};
 }
 
-// Smart erase behaviour (Auto-Correct)
-// For each pointer location: find best edge within snapDist; if found, draw brush at that edge position (auto-correct).
-// If no edge found within snapDist => do nothing (avoid accidental erase center-of-shirt).
-function handleSmartEraseStroke(clientX, clientY){
-  if(activePointers.size > 1) return; // safety
-  const rect = c.getBoundingClientRect();
-  const px = clientX - rect.left, py = clientY - rect.top;
-  const snapDist = Number(snapDistEl.value);
-  const sensitivity = Number(sensitivityEl.value); // 0..1 (how strong we accept weaker edges)
-  // find nearest strong edge
-  const edge = findNearestEdge(Math.round(px), Math.round(py), snapDist, 8);
-  if(!edge) return; // no edge in range -> do nothing for Auto-Correct
-  // optional: check sensitivity vs edge score (normalize)
-  // We'll accept edges above threshold; sensitivity can lower effective threshold by scaling score
-  // But since our edgeMap is based on alpha (0..255) then blurred, scores vary. We already filter in findNearestEdge.
-  const ex = edge.x, ey = edge.y;
-  // adaptive radius: reduce size if very close
-  const baseSize = Number(brushSizeEl.value);
-  const dist = edge.dist || 0;
-  const adaptive = Math.max(4, Math.round(baseSize * Math.max(0.4, 1 - (dist / snapDist))));
-  drawFeatherBrushOnEraseMask(ex, ey, adaptive, Number(brushHardEl.value));
+// tiny k-means (k=2) on rgb+alpha normalized; returns labels array length n and centroids
+function kmeans2(samples, maxIter=8){
+  const n = samples.length;
+  if(n < 4) return null;
+  // init centroids: pick two random pts
+  let c0 = samples[Math.floor(Math.random()*n)];
+  let c1 = samples[Math.floor(Math.random()*n)];
+  let cent = [{r:c0.r,g:c0.g,b:c0.b,a:c0.a,lum:c0.lum},{r:c1.r,g:c1.g,b:c1.b,a:c1.a,lum:c1.lum}];
+  const labels = new Uint8Array(n);
+  for(let iter=0; iter<maxIter; iter++){
+    let changed = false;
+    const sums = [{r:0,g:0,b:0,a:0,lum:0,cnt:0},{r:0,g:0,b:0,a:0,lum:0,cnt:0}];
+    for(let i=0;i<n;i++){
+      const s = samples[i];
+      // distance squared (weighted): emphasize alpha & lum a bit
+      const d0 = (s.r-cent[0].r)*(s.r-cent[0].r) + (s.g-cent[0].g)*(s.g-cent[0].g) + (s.b-cent[0].b)*(s.b-cent[0].b) + 1.5*(s.a-cent[0].a)*(s.a-cent[0].a) + 0.6*(s.lum-cent[0].lum)*(s.lum-cent[0].lum);
+      const d1 = (s.r-cent[1].r)*(s.r-cent[1].r) + (s.g-cent[1].g)*(s.g-cent[1].g) + (s.b-cent[1].b)*(s.b-cent[1].b) + 1.5*(s.a-cent[1].a)*(s.a-cent[1].a) + 0.6*(s.lum-cent[1].lum)*(s.lum-cent[1].lum);
+      const lbl = d0 <= d1 ? 0 : 1;
+      if(labels[i] !== lbl){ changed = true; labels[i] = lbl; }
+      const t = sums[lbl];
+      t.r += s.r; t.g += s.g; t.b += s.b; t.a += s.a; t.lum += s.lum; t.cnt++;
+    }
+    // recompute centroids
+    for(let k=0;k<2;k++){
+      if(sums[k].cnt > 0){
+        cent[k].r = sums[k].r / sums[k].cnt;
+        cent[k].g = sums[k].g / sums[k].cnt;
+        cent[k].b = sums[k].b / sums[k].cnt;
+        cent[k].a = sums[k].a / sums[k].cnt;
+        cent[k].lum = sums[k].lum / sums[k].cnt;
+      }
+    }
+    if(!changed) break;
+  }
+  return {labels, centroids:cent};
 }
 
-// Draw soft radial brush into eraseMask using destination-out so it erases (transparent hole).
-function drawFeatherBrushOnEraseMask(cx, cy, size, hardness){
+// flood-fill region by color/alpha similarity starting from seed (sx,sy) within patch bounds; uses threshold in RGB+alpha+lum metric
+function floodRegion(samples, sidx, patchWidth, patchHeight, threshold=3000){
+  const n = samples.length;
+  const visited = new Uint8Array(n);
+  const stack = [sidx];
+  const outIdx = [];
+  visited[sidx] = 1;
+  while(stack.length){
+    const i = stack.pop();
+    outIdx.push(i);
+    const s = samples[i];
+    const px = samples[i].x, py = samples[i].y;
+    // check 8 neighbors in grid
+    const gx = samples._x0, gy = samples._y0; // not used; we will compute neighbor by searching index
+    // Instead, we find neighbors by scanning small offsets based on proximity (samples are arranged in scan order)
+    // We'll check nbh indices: left, right, up, down via coordinates
+    const xi = s.x, yi = s.y;
+    const neighbors = [
+      {x:xi-1,y:yi},{x:xi+1,y:yi},{x:xi,y:yi-1},{x:xi,y:yi+1},
+      {x:xi-1,y:yi-1},{x:xi+1,y:yi-1},{x:xi-1,y:yi+1},{x:xi+1,y:yi+1}
+    ];
+    for(const nb of neighbors){
+      // find index in samples: compute offset
+      const relX = nb.x - samples._x0;
+      const relY = nb.y - samples._y0;
+      if(relX < 0 || relX >= patchWidth || relY < 0 || relY >= patchHeight) continue;
+      const ni = relY * patchWidth + relX;
+      if(visited[ni]) continue;
+      const t = samples[ni];
+      // distance metric
+      const dr = s.r - t.r, dg = s.g - t.g, db = s.b - t.b, da = (s.a - t.a), dl = (s.lum - t.lum);
+      const dist = dr*dr + dg*dg + db*db + 1.5*da*da + 0.6*dl*dl;
+      if(dist <= threshold){
+        visited[ni] = 1;
+        stack.push(ni);
+      }
+    }
+  }
+  return outIdx;
+}
+
+// utility: flatten sample array for flood usage: attach meta
+function prepareSamplesForFlood(patch){
+  // patch.arr is in scan order from (x0,y0)->(x1,y1)
+  const samples = patch.arr.slice(); // shallow copy of objects
+  samples._x0 = patch.x0; samples._y0 = patch.y0;
+  return samples;
+}
+
+// decide which cluster to erase: using mask alpha overlap and cluster color/alpha; returns target label index or null
+function chooseClusterToErase(patch, km){
+  // compute for each cluster: average alpha overlap with mask (how many points are within shirt alpha)
+  const w = maskCanvas ? maskCanvas.width : patch.tw;
+  const h = maskCanvas ? maskCanvas.height : patch.th;
+  const lab = [ {count:0,alphaSum:0, size:0}, {count:0,alphaSum:0, size:0} ];
+  const mctx = maskCanvas ? maskCanvas.getContext('2d') : null;
+  for(let i=0;i<km.labels.length;i++){
+    const lbl = km.labels[i];
+    lab[lbl].size++;
+    const pt = patch.arr[i];
+    // sample mask alpha at pt.x, pt.y
+    let ma = 0;
+    if(mctx && maskCanvas){
+      const mdata = mctx.getImageData(pt.x, pt.y, 1, 1).data;
+      ma = mdata[3];
+    } else {
+      ma = pt.a; // fallback
+    }
+    lab[lbl].alphaSum += ma;
+  }
+  // compute avg alpha
+  for(let k=0;k<2;k++){
+    lab[k].alphaAvg = lab[k].size ? lab[k].alphaSum / lab[k].size : 0;
+  }
+  // Which cluster is more likely "outside" (lower alpha) OR visually different? choose cluster with lower alpha or smaller size (likely detail)
+  // Heuristic: if one cluster avg alpha < other by a margin -> that cluster is outside (erasable)
+  const diffAlpha = lab[0].alphaAvg - lab[1].alphaAvg;
+  if(Math.abs(diffAlpha) > 12){ // clear alpha difference
+    return diffAlpha > 0 ? 1 : 0; // the cluster with smaller alpha is likely background/outside => erase
+  }
+  // else use size heuristic: smaller cluster likely detail to erase
+  return lab[0].size < lab[1].size ? 0 : 1;
+}
+
+// draw soft brush (radial gradient) onto eraseMask using destination-out
+function applyEraseRegion(regionCoords, patch, softness=0.6){
   if(!eraseMaskCtx) return;
-  // draw radial gradient where center opaque (we want to remove center fully), edge soft
-  const bs = Math.max(4, Math.ceil(size));
-  const b = document.createElement('canvas'); b.width = bs; b.height = bs; const bctx = b.getContext('2d');
-  const g = bctx.createRadialGradient(bs/2, bs/2, 0, bs/2, bs/2, bs/2);
-  const innerStop = Math.max(0, Math.min(1, hardness));
-  g.addColorStop(0, 'rgba(0,0,0,1)');
-  g.addColorStop(innerStop, 'rgba(0,0,0,1)');
-  g.addColorStop(1, 'rgba(0,0,0,0)');
-  bctx.clearRect(0,0,bs,bs); bctx.fillStyle = g; bctx.fillRect(0,0,bs,bs);
-  // draw onto eraseMask using destination-out
+  // regionCoords: array of indices in patch.arr. We'll compute bounding box and paint per point small radial gradients to feather
+  const pts = regionCoords.map(i => patch.arr[i]);
+  if(pts.length === 0) return;
+  // bounding box
+  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+  for(const p of pts){ if(p.x<minX) minX=p.x; if(p.y<minY) minY=p.y; if(p.x>maxX) maxX=p.x; if(p.y>maxY) maxY=p.y; }
+  // compute brush size adaptively from bbox diagonal
+  const diag = Math.hypot(maxX-minX, maxY-minY);
+  const base = Math.max(10, Math.min(120, Math.round(diag*0.8)));
+  // draw per-point radial small stamps for soft border
   eraseMaskCtx.save();
   eraseMaskCtx.globalCompositeOperation = 'destination-out';
-  eraseMaskCtx.drawImage(b, cx - bs/2, cy - bs/2, bs, bs);
+  for(const p of pts){
+    const bs = Math.max(6, Math.round(base * (0.5 + Math.random()*0.35)));
+    const b = document.createElement('canvas'); b.width = bs; b.height = bs; const bctx = b.getContext('2d');
+    const g = bctx.createRadialGradient(bs/2,bs/2,0,bs/2,bs/2,bs/2);
+    const inner = Math.max(0, Math.min(1, 0.45 + (1 - softness)*0.35));
+    g.addColorStop(0,'rgba(0,0,0,1)');
+    g.addColorStop(inner,'rgba(0,0,0,1)');
+    g.addColorStop(1,'rgba(0,0,0,0)');
+    bctx.fillStyle = g; bctx.fillRect(0,0,bs,bs);
+    eraseMaskCtx.drawImage(b, p.x - bs/2, p.y - bs/2, bs, bs);
+  }
   eraseMaskCtx.globalCompositeOperation = 'source-over';
   eraseMaskCtx.restore();
-  draw();
 }
 
-// +/- step buttons
-document.querySelectorAll('.step').forEach(btn=>{
-  btn.addEventListener('click', ()=>{
-    const id = btn.dataset.target;
-    const step = Number(btn.dataset.step);
-    const el = document.getElementById(id);
-    if(!el) return;
-    let val = Number(el.value) + step;
-    if(el.min !== undefined && el.min !== '') val = Math.max(Number(el.min), val);
-    if(el.max !== undefined && el.max !== '') val = Math.min(Number(el.max), val);
-    el.value = val;
-    el.dispatchEvent(new Event('input'));
-  });
+// push undo
+function pushUndo(){
+  try{
+    const data = eraseMaskCtx.getImageData(0,0,eraseMask.width,eraseMask.height);
+    undoStack.push(data);
+    if(undoStack.length > UNDO_LIMIT) undoStack.shift();
+    undoBtn.disabled = false;
+  }catch(e){}
+}
+undoBtn.addEventListener('click', ()=>{
+  if(undoStack.length===0) return;
+  const img = undoStack.pop(); eraseMaskCtx.putImageData(img,0,0);
+  if(undoStack.length===0) undoBtn.disabled = true;
+  draw();
 });
 
-// sliders update pattern state
-[posX,posY,scaleEl,rotationEl,opacityEl,displaceStrength].forEach(el=>{
-  el.addEventListener('input', ()=>{
-    patternState.x = Number(posX.value);
-    patternState.y = Number(posY.value);
-    patternState.scale = Number(scaleEl.value);
-    patternState.rot = Number(rotationEl.value);
-    patternState.alpha = Number(opacityEl.value);
-    draw();
-  });
+resetEraseBtn.addEventListener('click', ()=>{
+  pushUndo();
+  eraseMaskCtx.clearRect(0,0,eraseMask.width,eraseMask.height);
+  eraseMaskCtx.fillStyle = 'white';
+  eraseMaskCtx.fillRect(0,0,eraseMask.width,eraseMask.height);
+  draw();
 });
 
-// center/tile/reset
-centerBtn.addEventListener('click', ()=>{ patternState.x = c.width/2; patternState.y = c.height/2; syncUI(); draw(); });
-tileBtn.addEventListener('click', ()=>{ patternState.tiled = !patternState.tiled; tileBtn.textContent = patternState.tiled ? 'Tile: ON' : 'Toggle Tile'; draw(); });
-resetBtn.addEventListener('click', ()=>{ shirtImg=null; patternImg=null; maskCanvas=null; lumMap=null; edgeMap=null; patternState={x:c.width/2,y:c.height/2,scale:1,rot:0,alpha:1,tiled:false}; ensureEraseMaskSize(c.width,c.height); eraseMaskCtx.clearRect(0,0,eraseMask.width,eraseMask.height); eraseMaskCtx.fillStyle='white'; eraseMaskCtx.fillRect(0,0,eraseMask.width,eraseMask.height); undoStack.length=0; undoBtn.disabled=true; document.getElementById('shirtFile').value=''; document.getElementById('patternFile').value=''; syncUI(); draw(); });
+// AI stroke handler: compute patch, kmeans, choose cluster, flood, apply
+function handleAIStroke(clientX, clientY){
+  if(!maskCanvas) return;
+  // convert to canvas coords
+  const rect = canvas.getBoundingClientRect();
+  const cx = Math.round(clientX - rect.left), cy = Math.round(clientY - rect.top);
+  // adaptive radius: smaller near edges (if edgeMap shows presence), else larger
+  const R0 = 36; // base radius
+  const w = canvas.width, h = canvas.height;
+  let r = R0;
+  // if edge strength nearby -> smaller radius
+  let edgeStrength = 0;
+  if(edgeMap){
+    const ex = Math.max(0, Math.min(w-1, cx)), ey = Math.max(0, Math.min(h-1, cy));
+    edgeStrength = edgeMap[ey*w + ex] || 0;
+    // normalize roughly
+    if(edgeStrength > 30) r = Math.max(14, Math.round(R0 * 0.6));
+    else if(edgeStrength > 8) r = Math.max(20, Math.round(R0 * 0.8));
+  }
+  // sample patch
+  const patch = samplePatch(cx, cy, r);
+  if(!patch.arr || patch.arr.length < 10) return;
+  // small k-means on patch
+  const km = kmeans2(patch.arr, 8);
+  if(!km) return;
+  // pick cluster to erase using heuristics
+  const targetLabel = chooseClusterToErase(patch, km);
+  if(targetLabel === null) return;
+  // find seed indices within patch near center that belong to targetLabel
+  const centerRelX = cx - patch.x0, centerRelY = cy - patch.y0;
+  const seedCandidates = [];
+  for(let i=0;i<km.labels.length;i++){
+    const lbl = km.labels[i];
+    if(lbl !== targetLabel) continue;
+    const pt = patch.arr[i];
+    const dx = pt.x - cx, dy = pt.y - cy;
+    if(dx*dx + dy*dy <= (r*r)) seedCandidates.push(i);
+  }
+  if(seedCandidates.length === 0) return;
+  // pick the closest candidate to center
+  seedCandidates.sort((a,b)=>{
+    const pa = patch.arr[a], pb = patch.arr[b];
+    const da = (pa.x - cx)*(pa.x - cx) + (pa.y - cy)*(pa.y - cy);
+    const db = (pb.x - cx)*(pb.x - cx) + (pb.y - cy)*(pb.y - cy);
+    return da - db;
+  });
+  const seedIndex = seedCandidates[0];
+  // prepare for flood: attach patch dims
+  const samples = prepareSamplesForFlood(patch);
+  // threshold: dynamic based on local variance
+  const threshold = 3200; // conservative
+  const region = floodRegion(samples, seedIndex, patch.tw, patch.th, threshold);
+  if(!region || region.length < 4) return;
+  // apply erased region onto eraseMask (feathered)
+  applyEraseRegion(region, patch, 0.65);
+}
 
-// download (high-res) - same approach as before but ensure scaled eraseMask & mask applied
+// pointer events (multi-touch safe)
+canvas.addEventListener('pointerdown', e=>{
+  activePointers.add(e.pointerId); updateMT();
+  if(activePointers.size > 1){ isErasing = false; dragging = false; lastPointerId = null; return; }
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left, y = e.clientY - rect.top;
+  // if not eraser mode -> attempt drag pattern
+  if(!eraserOn && patternImg){
+    // hit test for transform drag
+    const w = (patternImg.naturalWidth||patternImg.width) * Math.min((canvas.width*0.6)/(patternImg.naturalWidth||patternImg.width),(canvas.height*0.6)/(patternImg.naturalHeight||patternImg.height)) * patternState.scale;
+    const h = (patternImg.naturalHeight||patternImg.height) * Math.min((canvas.width*0.6)/(patternImg.naturalWidth||patternImg.width),(canvas.height*0.6)/(patternImg.naturalHeight||patternImg.height)) * patternState.scale;
+    const dx = x - patternState.x, dy = y - patternState.y; const theta = -patternState.rot * Math.PI/180;
+    const rx = dx * Math.cos(theta) - dy * Math.sin(theta); const ry = dx * Math.sin(theta) + dy * Math.cos(theta);
+    if(Math.abs(rx) <= w/2 + 20 && Math.abs(ry) <= h/2 + 20){ dragging = true; dragOffset.x = dx; dragOffset.y = dy; try{ canvas.setPointerCapture(e.pointerId); }catch(_){} lastPointerId = e.pointerId; return; }
+  }
+  // else start AI erase stroke
+  ensureEraseMaskSize(canvas.width, canvas.height);
+  pushUndo();
+  isErasing = true; lastPointerId = e.pointerId;
+  try{ canvas.setPointerCapture(e.pointerId); }catch(_){} 
+  handleAIStroke(e.clientX, e.clientY);
+});
+canvas.addEventListener('pointermove', e=>{
+  if(!activePointers.has(e.pointerId)) activePointers.add(e.pointerId); updateMT();
+  if(activePointers.size > 1) return;
+  if(dragging && !eraserOn){
+    const rect = canvas.getBoundingClientRect(); patternState.x = e.clientX - rect.left - dragOffset.x; patternState.y = e.clientY - rect.top - dragOffset.y; draw(); return;
+  }
+  if(!isErasing || lastPointerId !== e.pointerId) return;
+  handleAIStroke(e.clientX, e.clientY);
+});
+canvas.addEventListener('pointerup', e=>{
+  activePointers.delete(e.pointerId); updateMT();
+  if(lastPointerId === e.pointerId){ isErasing = false; dragging = false; try{ canvas.releasePointerCapture(e.pointerId); }catch(_){} lastPointerId = null; }
+});
+canvas.addEventListener('pointercancel', e=>{ activePointers.delete(e.pointerId); updateMT(); isErasing=false; dragging=false; lastPointerId=null; });
+
+// show/hide multi-touch indicator
+function updateMT(){ mtIndicator.style.opacity = activePointers.size > 1 ? '1' : '0'; }
+
+// UI toggles
+eraserBtn.addEventListener('click', ()=>{ eraserOn = !eraserOn; eraserBtn.style.background = eraserOn ? '#111' : '#777'; eraserBtn.textContent = eraserOn ? 'Eraser (Auto)' : 'Pointer (Move)'; });
+resetBtn.addEventListener('click', ()=>{ shirtImg=null; patternImg=null; maskCanvas=null; lumMap=null; edgeMap=null; patternState={x:canvas.width/2,y:canvas.height/2,scale:1,rot:0,alpha:1,tiled:false}; ensureEraseMaskSize(canvas.width,canvas.height); eraseMaskCtx.clearRect(0,0,eraseMask.width,eraseMask.height); eraseMaskCtx.fillStyle='white'; eraseMaskCtx.fillRect(0,0,eraseMask.width,eraseMask.height); undoStack.length=0; undoBtn.disabled=true; document.getElementById('shirtFile').value=''; document.getElementById('patternFile').value=''; draw(); });
+
+// download (high-res)
 downloadBtn.addEventListener('click', ()=>{
-  if(!shirtImg && !patternImg) return;
-  const scaleFactor = 2; const tmp=document.createElement('canvas'); tmp.width=c.width*scaleFactor; tmp.height=c.height*scaleFactor; const tctx = tmp.getContext('2d');
-  if(shirtImg) tctx.drawImage(shirtImg,0,0,tmp.width,tmp.height); else drawCheckerBackground(tctx,tmp.width,tmp.height);
-  // build high-res pattern
+  if(!patternImg && !shirtImg) return;
+  const scaleFactor = 2;
+  const tmp = document.createElement('canvas'); tmp.width = canvas.width * scaleFactor; tmp.height = canvas.height * scaleFactor;
+  const tctx = tmp.getContext('2d');
+  if(shirtImg) tctx.drawImage(shirtImg,0,0,tmp.width,tmp.height); else drawChecker(tctx,tmp.width,tmp.height);
+  // pattern scaled
   const pCanvas = document.createElement('canvas'); pCanvas.width = tmp.width; pCanvas.height = tmp.height; const pctx = pCanvas.getContext('2d');
   pctx.save(); pctx.translate(patternState.x*scaleFactor, patternState.y*scaleFactor); pctx.rotate(patternState.rot*Math.PI/180); pctx.scale(patternState.scale, patternState.scale);
-  if(patternState.tiled){ const patt=pctx.createPattern(patternImg,'repeat'); pctx.fillStyle=patt; pctx.fillRect(-pCanvas.width,-pCanvas.height,pCanvas.width*2,pCanvas.height*2); }
-  else { const w=patternImg.naturalWidth||patternImg.width, h=patternImg.naturalHeight||patternImg.height; const defaultScale=Math.min((pCanvas.width*0.6)/w,(pCanvas.height*0.6)/h); pctx.drawImage(patternImg,-(w*defaultScale)/2,-(h*defaultScale)/2,w*defaultScale,h*defaultScale); }
+  if(patternState.tiled){ const patt = pctx.createPattern(patternImg,'repeat'); pctx.fillStyle=patt; pctx.fillRect(-pCanvas.width,-pCanvas.height,pCanvas.width*2,pCanvas.height*2); }
+  else { const w = patternImg.naturalWidth||patternImg.width, h = patternImg.naturalHeight||patternImg.height; const defaultScale = Math.min((pCanvas.width*0.6)/w,(pCanvas.height*0.6)/h); pctx.drawImage(patternImg,-w*defaultScale/2,-h*defaultScale/2,w*defaultScale,h*defaultScale); }
   pctx.restore();
-  if(!displaceToggle.checked || !lumMap){
-    const eScaled=document.createElement('canvas'); eScaled.width=tmp.width; eScaled.height=tmp.height; const ectx=eScaled.getContext('2d'); ectx.drawImage(eraseMask,0,0,tmp.width,tmp.height);
-    const temp=document.createElement('canvas'); temp.width=tmp.width; temp.height=tmp.height; const tt=temp.getContext('2d'); tt.drawImage(pCanvas,0,0); tt.globalCompositeOperation='destination-in'; tt.drawImage(eScaled,0,0); tt.globalCompositeOperation='source-over';
-    if(maskCanvas){ const mScaled=document.createElement('canvas'); mScaled.width=tmp.width; mScaled.height=tmp.height; const mctx=mScaled.getContext('2d'); mctx.drawImage(maskCanvas,0,0,tmp.width,tmp.height); tt.globalCompositeOperation='destination-in'; tt.drawImage(mScaled,0,0); tt.globalCompositeOperation='source-over'; }
-    tctx.globalAlpha = patternState.alpha; tctx.globalCompositeOperation='multiply'; tctx.drawImage(temp,0,0); tctx.globalCompositeOperation='source-over'; tctx.globalAlpha=1;
-    const link=document.createElement('a'); link.download='mockup.png'; link.href=tmp.toDataURL('image/png'); link.click(); return;
-  }
-  // displacement high-res
-  const scaledLum = scaleLumMap(lumMap, c.width, c.height, tmp.width, tmp.height);
-  const pw=pCanvas.width, ph=pCanvas.height; const pDataHR = pctx.getImageData(0,0,pw,ph).data;
-  const displacedHR=document.createElement('canvas'); displacedHR.width=pw; displacedHR.height=ph; const dctxHR=displacedHR.getContext('2d'); const outHR=dctxHR.createImageData(pw,ph); const outDataHR=outHR.data; const strength=Number(displaceStrength.value);
-  const gx=new Float32Array(pw*ph), gy=new Float32Array(pw*ph);
-  for(let y=0;y<ph;y++) for(let x=0;x<pw;x++){ const i=y*pw+x; const left = x>0?scaledLum[i-1]:scaledLum[i]; const right = x<pw-1?scaledLum[i+1]:scaledLum[i]; const top = y>0?scaledLum[i-pw]:scaledLum[i]; const bottom = y<ph-1?scaledLum[i+pw]:scaledLum[i]; gx[i]=right-left; gy[i]=bottom-top; }
-  for(let y=0;y<ph;y++) for(let x=0;x<pw;x++){ const i=y*pw+x; const dx=-gx[i]*(strength/50); const dy=-gy[i]*(strength/50); let sx=Math.round(x+dx), sy=Math.round(y+dy); if(sx<0) sx=0; if(sx>=pw) sx=pw-1; if(sy<0) sy=0; if(sy>=ph) sy=ph-1; const si=(sy*pw+sx)*4, oi=i*4; outDataHR[oi]=pDataHR[si]; outDataHR[oi+1]=pDataHR[si+1]; outDataHR[oi+2]=pDataHR[si+2]; outDataHR[oi+3]=pDataHR[si+3]; }
-  dctxHR.putImageData(outHR,0,0);
-  // apply eraseMask scaled & mask scaled
-  const eScaled=document.createElement('canvas'); eScaled.width=tmp.width; eScaled.height=tmp.height; const ectx=eScaled.getContext('2d'); ectx.drawImage(eraseMask,0,0,tmp.width,tmp.height);
-  const mScaled=document.createElement('canvas'); mScaled.width=tmp.width; mScaled.height=tmp.height; const mctx=mScaled.getContext('2d'); if(maskCanvas) mctx.drawImage(maskCanvas,0,0,tmp.width,tmp.height);
-  const temp2=document.createElement('canvas'); temp2.width=tmp.width; temp2.height=tmp.height; const tt=temp2.getContext('2d'); tt.drawImage(displacedHR,0,0,tmp.width,tmp.height); tt.globalCompositeOperation='destination-in'; tt.drawImage(eScaled,0,0); tt.globalCompositeOperation='source-over'; if(maskCanvas){ tt.globalCompositeOperation='destination-in'; tt.drawImage(mScaled,0,0); tt.globalCompositeOperation='source-over'; }
-  tctx.globalAlpha=patternState.alpha; tctx.globalCompositeOperation='multiply'; tctx.drawImage(temp2,0,0); tctx.globalCompositeOperation='source-over'; tctx.globalAlpha=1;
-  const link=document.createElement('a'); link.download='mockup.png'; link.href=tmp.toDataURL('image/png'); link.click();
+  // apply eraseMask scaled & shirt mask scaled
+  const eScaled = document.createElement('canvas'); eScaled.width = tmp.width; eScaled.height = tmp.height; const ectx = eScaled.getContext('2d'); ectx.drawImage(eraseMask,0,0,tmp.width,tmp.height);
+  const temp = document.createElement('canvas'); temp.width = tmp.width; temp.height = tmp.height; const tt = temp.getContext('2d'); tt.drawImage(pCanvas,0,0); tt.globalCompositeOperation='destination-in'; tt.drawImage(eScaled,0,0); tt.globalCompositeOperation='source-over';
+  if(maskCanvas){ const mScaled = document.createElement('canvas'); mScaled.width = tmp.width; mScaled.height = tmp.height; const mctx = mScaled.getContext('2d'); mctx.drawImage(maskCanvas,0,0,tmp.width,tmp.height); tt.globalCompositeOperation='destination-in'; tt.drawImage(mScaled,0,0); tt.globalCompositeOperation='source-over'; }
+  tctx.globalAlpha = patternState.alpha; tctx.globalCompositeOperation = 'multiply'; tctx.drawImage(temp,0,0); tctx.globalCompositeOperation='source-over'; tctx.globalAlpha = 1;
+  const link = document.createElement('a'); link.download = 'mockup.png'; link.href = tmp.toDataURL('image/png'); link.click();
 });
 
-// helper scale lum map
-function scaleLumMap(src, sw, sh, tw, th){ if(!src) return null; const out=new Float32Array(tw*th); for(let y=0;y<th;y++) for(let x=0;x<tw;x++){ const sx=Math.floor(x*sw/tw), sy=Math.floor(y*sh/th); out[y*tw+x] = src[sy*sw + sx]; } return out; }
-
-// init
-function init(){ ensureEraseMaskSize(c.width,c.height); syncUI(); draw(); }
+// small helpers & init
+function syncUI(){ /* no extra UI sliders in this zero-tuning version */ }
+function init(){ ensureEraseMaskSize(canvas.width || 900, canvas.height || 1100); syncUI(); draw(); }
 init();
 
 </script>
