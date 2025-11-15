@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Mockup — Safe Pinch + Undo + +/- Controls + AI Smart Selection</title>
+<title>Mockup — Safe Pinch + Undo + AI-Assisted Selection</title>
 <style>
 :root{--accent:#0b66ff}
 body{font-family:system-ui,-apple-system,Segoe UI,Roboto;display:flex;gap:16px;padding:14px;background:#f6f7fb;color:#0b0b0b}
@@ -23,13 +23,14 @@ button{background:var(--accent);color:#fff;border:0;padding:8px 10px;border-radi
 .footer{font-size:12px;color:#666;margin-top:12px;text-align:center}
 .tool-group{margin-top:8px;padding:8px;border:1px solid #e0e0e0;border-radius:8px}
 .selection-overlay{position:absolute;pointer-events:none;border:2px dashed #ff0000;background-color:rgba(255,0,0,0.1);display:none}
+.brush-preview{width:20px;height:20px;border-radius:50%;border:1px solid #ccc;display:inline-block;vertical-align:middle;margin-left:5px}
 </style>
 </head>
 <body>
 
 <div class="panel">
-  <h3>Mockup — Safe Pinch + Undo + +/- Controls + AI Smart Selection</h3>
-  <div class="small">Pinch-zoom native diperbolehkan. Eraser otomatis nonaktif saat multi-touch.</div>
+  <h3>Mockup — Safe Pinch + Undo + AI-Assisted Selection</h3>
+  <div class="small">Gunakan brush untuk menyeleksi area, lalu Apply untuk menghapus dengan deteksi pinggir/lipatan baju</div>
 
   <label>Upload Baju (PNG transparan)</label>
   <input id="shirtFile" type="file" accept="image/*">
@@ -90,17 +91,24 @@ button{background:var(--accent);color:#fff;border:0;padding:8px 10px;border-radi
   </div>
 
   <div class="tool-group">
-    <label style="margin-top:0">AI Smart Selection</label>
+    <label style="margin-top:0">AI-Assisted Selection</label>
     <div class="toolbar">
-      <button id="smartSelectBtn">AI Select</button>
-      <div class="badge">
-        Tolerance: 
-        <button class="step" data-target="selectTolerance" data-step="-5">−</button>
-        <input id="selectTolerance" type="range" min="1" max="100" value="30" style="width:80px">
-        <button class="step" data-target="selectTolerance" data-step="5">+</button>
+      <button id="selectionBrushBtn">Selection Brush</button>
+      <div class="badge">Size 
+        <button class="step" data-target="selectionBrushSize" data-step="-4">−</button>
+        <input id="selectionBrushSize" type="range" min="4" max="200" value="40" style="vertical-align:middle;width:80px">
+        <button class="step" data-target="selectionBrushSize" data-step="4">+</button>
+        <div class="brush-preview" id="brushPreview"></div>
       </div>
       <button id="applySelectionBtn" style="background:#10b981">Apply Selection</button>
       <button id="clearSelectionBtn" style="background:#6b7280">Clear</button>
+    </div>
+    <div class="small" style="margin-top:6px">
+      AI Precision: 
+      <button class="step" data-target="aiPrecision" data-step="-5">−</button>
+      <input id="aiPrecision" type="range" min="5" max="50" value="20" style="width:100px">
+      <button class="step" data-target="aiPrecision" data-step="5">+</button>
+      <span class="small">(Tinggi: deteksi detail, Rendah: area lebih luas)</span>
     </div>
   </div>
 
@@ -127,7 +135,7 @@ button{background:var(--accent);color:#fff;border:0;padding:8px 10px;border-radi
     <button id="resetBtn" style="background:#eee;color:#111">Reset All</button>
   </div>
 
-  <div class="small" style="margin-top:8px">Tip: pinch untuk zoom halaman. Eraser nonaktif jika lebih dari 1 sentuhan.</div>
+  <div class="small" style="margin-top:8px">Tip: Gunakan Selection Brush untuk tandai area, lalu Apply untuk hapus dengan AI</div>
   <div class="footer">Copy–paste file ini ke index.html di GitHub — siap pakai.</div>
 </div>
 
@@ -143,11 +151,12 @@ button{background:var(--accent);color:#fff;border:0;padding:8px 10px;border-radi
 </div>
 
 <script>
-/* Enhanced: Added AI Smart Selection Tool with color-based region detection */
+/* Enhanced: AI-Assisted Selection Brush with edge detection */
 
 const c = document.getElementById('c');
 const ctx = c.getContext('2d');
 const selectionOverlay = document.getElementById('selectionOverlay');
+const brushPreview = document.getElementById('brushPreview');
 
 let shirtImg = null, patternImg = null, maskCanvas = null, lumMap = null;
 let patternState = { x: c.width/2, y: c.height/2, scale:1, rot:0, alpha:1, tiled:false };
@@ -162,14 +171,15 @@ const UNDO_LIMIT = 20;
 const activePointers = new Set();
 
 let eraserMode = true;
-let smartSelectMode = false;
+let selectionBrushMode = false;
 let isErasing = false;
+let isSelecting = false;
 let dragging = false;
 let dragOffset = {x:0,y:0};
 let lastPointerId = null;
 
 // Selection variables
-let currentSelection = null;
+let currentSelection = [];
 let selectionCanvas = null;
 
 // UI refs
@@ -188,10 +198,11 @@ const downloadBtn = document.getElementById('downloadBtn');
 const resetBtn = document.getElementById('resetBtn');
 
 const eraserBtn = document.getElementById('eraserBtn');
-const smartSelectBtn = document.getElementById('smartSelectBtn');
+const selectionBrushBtn = document.getElementById('selectionBrushBtn');
 const applySelectionBtn = document.getElementById('applySelectionBtn');
 const clearSelectionBtn = document.getElementById('clearSelectionBtn');
-const toleranceEl = document.getElementById('selectTolerance');
+const selectionBrushSizeEl = document.getElementById('selectionBrushSize');
+const aiPrecisionEl = document.getElementById('aiPrecision');
 const brushSizeEl = document.getElementById('brushSize');
 const brushHardEl = document.getElementById('brushHard');
 const undoBtn = document.getElementById('undoBtn');
@@ -202,6 +213,13 @@ const smallPreview = document.getElementById('smallPreview');
 
 // initialize undo button disabled
 undoBtn.disabled = true;
+
+// Update brush preview
+function updateBrushPreview() {
+  const size = parseInt(selectionBrushSizeEl.value);
+  brushPreview.style.width = `${Math.max(10, size/2)}px`;
+  brushPreview.style.height = `${Math.max(10, size/2)}px`;
+}
 
 // helpers
 function ensureEraseMaskSize(w,h){
@@ -295,7 +313,7 @@ function computeLuminanceMap(){
 }
 function boxBlurFloat(arr,w,h,radius){ if(radius<1) return arr; const tmp=new Float32Array(arr.length); for(let y=0;y<h;y++) for(let x=0;x<w;x++){ let sum=0,cnt=0; for(let k=-radius;k<=radius;k++){ const xx=x+k; if(xx>=0 && xx<w){ sum+=arr[y*w+xx]; cnt++; } } tmp[y*w+x]=sum/cnt; } const out=new Float32Array(arr.length); for(let x=0;x<w;x++) for(let y=0;y<h;y++){ let sum=0,cnt=0; for(let k=-radius;k<=radius;k++){ const yy=y+k; if(yy>=0 && yy<h){ sum+=tmp[yy*w+x]; cnt++; } } out[y*w+x]=sum/cnt; } return out; }
 
-// drawing pipeline (same as earlier but concise)
+// drawing pipeline
 function draw(){
   ctx.clearRect(0,0,c.width,c.height);
   if(shirtImg) ctx.drawImage(shirtImg,0,0,c.width,c.height); else drawCheckerBackground(ctx,c.width,c.height);
@@ -350,66 +368,31 @@ resetEraseBtn.addEventListener('click', ()=>{ pushUndo(); eraseMaskCtx.clearRect
 // Eraser toggle
 eraserBtn.addEventListener('click', ()=>{ 
   eraserMode = !eraserMode; 
-  smartSelectMode = false;
+  selectionBrushMode = false;
   eraserBtn.style.background = eraserMode ? '#111' : '#666'; 
-  smartSelectBtn.style.background = '#666';
+  selectionBrushBtn.style.background = '#666';
   eraserBtn.textContent = eraserMode ? 'Eraser' : 'Paint'; 
   clearSelection();
 });
 
-// Smart Selection toggle
-smartSelectBtn.addEventListener('click', ()=>{ 
-  smartSelectMode = !smartSelectMode; 
+// Selection Brush toggle
+selectionBrushBtn.addEventListener('click', ()=>{ 
+  selectionBrushMode = !selectionBrushMode; 
   eraserMode = false;
-  smartSelectBtn.style.background = smartSelectMode ? '#111' : '#666'; 
+  selectionBrushBtn.style.background = selectionBrushMode ? '#111' : '#666'; 
   eraserBtn.style.background = '#666';
-  if (!smartSelectMode) {
+  if (!selectionBrushMode) {
     clearSelection();
   }
 });
 
-// Apply Selection button
+// Apply Selection button - AI-assisted edge detection
 applySelectionBtn.addEventListener('click', function() {
-  if (currentSelection) {
-    pushUndo();
-    // Apply selection to erase mask
-    eraseMaskCtx.globalCompositeOperation = 'destination-out';
-    eraseMaskCtx.drawImage(selectionCanvas, 0, 0);
-    eraseMaskCtx.globalCompositeOperation = 'source-over';
-    
-    // Clear selection
-    clearSelection();
-    draw();
-  }
-});
-
-// Clear Selection button
-clearSelectionBtn.addEventListener('click', clearSelection);
-
-// Canvas untuk menampilkan selection
-function initSelectionCanvas() {
-  if (!selectionCanvas) {
-    selectionCanvas = document.createElement('canvas');
-    selectionCanvas.width = c.width;
-    selectionCanvas.height = c.height;
-  }
-}
-
-function clearSelection() {
-  if (selectionCanvas) {
-    const ctx = selectionCanvas.getContext('2d');
-    ctx.clearRect(0, 0, selectionCanvas.width, selectionCanvas.height);
-  }
-  currentSelection = null;
-  selectionOverlay.style.display = 'none';
-  draw(); // Redraw tanpa selection
-}
-
-// Smart Selection function - detects similar color regions
-function smartSelect(x, y) {
-  if (!shirtImg) return;
+  if (currentSelection.length === 0) return;
   
-  // Get shirt image data
+  pushUndo();
+  
+  // Get shirt image data for edge detection
   const tmp = document.createElement('canvas');
   tmp.width = c.width;
   tmp.height = c.height;
@@ -418,121 +401,116 @@ function smartSelect(x, y) {
   const imgData = tctx.getImageData(0, 0, tmp.width, tmp.height);
   const data = imgData.data;
   
-  // Get target color at click position
-  const pos = (Math.floor(y) * tmp.width + Math.floor(x)) * 4;
-  const targetR = data[pos];
-  const targetG = data[pos + 1];
-  const targetB = data[pos + 2];
-  const targetA = data[pos + 3];
+  // Create a canvas for the AI-expanded selection
+  const aiSelectionCanvas = document.createElement('canvas');
+  aiSelectionCanvas.width = c.width;
+  aiSelectionCanvas.height = c.height;
+  const aiCtx = aiSelectionCanvas.getContext('2d');
+  aiCtx.clearRect(0, 0, c.width, c.height);
   
-  // Tolerance from slider
-  const tolerance = Number(toleranceEl.value);
+  // Mark initial selection
+  aiCtx.fillStyle = 'white';
+  currentSelection.forEach(([x, y]) => {
+    aiCtx.fillRect(x, y, 1, 1);
+  });
   
-  // Create temporary canvas for flood fill
-  initSelectionCanvas();
-  const sctx = selectionCanvas.getContext('2d');
-  sctx.clearRect(0, 0, tmp.width, tmp.height);
+  // Get AI precision value
+  const precision = Number(aiPrecisionEl.value);
   
-  // Perform flood fill algorithm
-  const stack = [[x, y]];
+  // Expand selection based on edge detection
+  expandSelectionWithAI(aiCtx, data, c.width, c.height, precision);
+  
+  // Apply the AI-expanded selection to erase mask
+  eraseMaskCtx.globalCompositeOperation = 'destination-out';
+  eraseMaskCtx.drawImage(aiSelectionCanvas, 0, 0);
+  eraseMaskCtx.globalCompositeOperation = 'source-over';
+  
+  // Clear selection
+  clearSelection();
+  draw();
+});
+
+// AI-assisted selection expansion with edge detection
+function expandSelectionWithAI(aiCtx, imgData, width, height, precision) {
+  const data = imgData.data;
   const visited = new Set();
-  const selectedPixels = [];
+  const queue = [...currentSelection];
+  const edgeThreshold = 30; // Threshold for edge detection
   
-  while (stack.length > 0) {
-    const [cx, cy] = stack.pop();
-    const key = `${Math.round(cx)},${Math.round(cy)}`;
+  // Convert precision to a range (higher precision = smaller expansion)
+  const expansionRange = Math.max(1, Math.floor(20 - precision / 3));
+  
+  while (queue.length > 0) {
+    const [x, y] = queue.shift();
+    const key = `${x},${y}`;
     
-    if (visited.has(key) || cx < 0 || cx >= tmp.width || cy < 0 || cy >= tmp.height) {
+    if (visited.has(key) || x < 0 || x >= width || y < 0 || y >= height) {
       continue;
     }
     
     visited.add(key);
     
-    const cPos = (Math.floor(cy) * tmp.width + Math.floor(cx)) * 4;
-    const r = data[cPos];
-    const g = data[cPos + 1];
-    const b = data[cPos + 2];
-    const a = data[cPos + 3];
+    // Check if this pixel is part of the shirt (not transparent/background)
+    const pos = (y * width + x) * 4;
+    const alpha = data[pos + 3];
     
-    // Calculate color difference
-    const diff = Math.sqrt(
-      Math.pow(r - targetR, 2) + 
-      Math.pow(g - targetG, 2) + 
-      Math.pow(b - targetB, 2)
-    );
+    if (alpha < 10) continue; // Skip transparent pixels
     
-    // If similar enough, add to selection and check neighbors
-    if (diff <= tolerance && a > 10) {
-      selectedPixels.push([cx, cy]);
+    // Calculate edge strength using Sobel operator
+    const edgeStrength = calculateEdgeStrength(data, x, y, width, height);
+    
+    // If not a strong edge, expand selection
+    if (edgeStrength < edgeThreshold) {
+      aiCtx.fillRect(x, y, 1, 1);
       
-      // Add neighbors to stack
-      stack.push([cx + 1, cy]);
-      stack.push([cx - 1, cy]);
-      stack.push([cx, cy + 1]);
-      stack.push([cx, cy - 1]);
+      // Add neighbors to queue based on expansion range
+      for (let dx = -expansionRange; dx <= expansionRange; dx++) {
+        for (let dy = -expansionRange; dy <= expansionRange; dy++) {
+          // Skip if too far (circular expansion)
+          if (Math.sqrt(dx*dx + dy*dy) > expansionRange) continue;
+          
+          const nx = x + dx;
+          const ny = y + dy;
+          const nKey = `${nx},${ny}`;
+          
+          if (!visited.has(nKey) && nx >= 0 && nx < width && ny >= 0 && ny < height) {
+            queue.push([nx, ny]);
+          }
+        }
+      }
+    }
+  }
+}
+
+// Calculate edge strength using Sobel operator
+function calculateEdgeStrength(data, x, y, width, height) {
+  if (x < 1 || x >= width-1 || y < 1 || y >= height-1) return 0;
+  
+  let gx = 0, gy = 0;
+  
+  // Sobel kernel for X and Y
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      const pos = ((y + dy) * width + (x + dx)) * 4;
+      const luminance = (0.299 * data[pos] + 0.587 * data[pos+1] + 0.114 * data[pos+2]) / 255;
+      
+      // Apply Sobel kernel
+      gx += luminance * (dx === 0 ? 0 : (dx === -1 ? -1 : 1));
+      gy += luminance * (dy === 0 ? 0 : (dy === -1 ? -1 : 1));
     }
   }
   
-  // Visualize selection
-  visualizeSelection(selectedPixels);
-  currentSelection = selectedPixels;
+  // Calculate edge strength
+  return Math.sqrt(gx * gx + gy * gy) * 100;
 }
 
-// Visualisasi area yang terpilih
-function visualizeSelection(pixels) {
-  if (!selectionCanvas) initSelectionCanvas();
-  
-  const ctx = selectionCanvas.getContext('2d');
-  ctx.clearRect(0, 0, selectionCanvas.width, selectionCanvas.height);
-  
-  // Gambar selection sebagai area semi-transparan
-  ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
-  
-  // Draw all selected pixels
-  pixels.forEach(([x, y]) => {
-    ctx.fillRect(x, y, 1, 1);
-  });
-  
-  // Update selection overlay
-  if (pixels.length > 0) {
-    const bounds = calculateSelectionBounds(pixels);
-    selectionOverlay.style.left = bounds.x + 'px';
-    selectionOverlay.style.top = bounds.y + 'px';
-    selectionOverlay.style.width = bounds.width + 'px';
-    selectionOverlay.style.height = bounds.height + 'px';
-    selectionOverlay.style.display = 'block';
-  }
-  
-  drawWithSelection();
-}
+// Clear Selection button
+clearSelectionBtn.addEventListener('click', clearSelection);
 
-// Calculate bounds for selection overlay
-function calculateSelectionBounds(pixels) {
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  
-  pixels.forEach(([x, y]) => {
-    minX = Math.min(minX, x);
-    minY = Math.min(minY, y);
-    maxX = Math.max(maxX, x);
-    maxY = Math.max(maxY, y);
-  });
-  
-  return {
-    x: minX,
-    y: minY,
-    width: maxX - minX,
-    height: maxY - minY
-  };
-}
-
-// Draw dengan menampilkan selection
-function drawWithSelection() {
-  draw(); // Draw normal dulu
-  
-  // Overlay selection di atasnya
-  if (selectionCanvas && currentSelection) {
-    ctx.drawImage(selectionCanvas, 0, 0);
-  }
+function clearSelection() {
+  currentSelection = [];
+  selectionOverlay.style.display = 'none';
+  draw();
 }
 
 // pointer tracking (multi-touch safe)
@@ -541,6 +519,7 @@ c.addEventListener('pointerdown', e=>{
   // if multi-touch active, don't start erasing (allow pinch-zoom native)
   if(activePointers.size > 1){
     isErasing = false;
+    isSelecting = false;
     dragging = false;
     lastPointerId = null;
     return;
@@ -549,9 +528,12 @@ c.addEventListener('pointerdown', e=>{
   // single touch: decide whether to start drag or eraser/paint
   const rect=c.getBoundingClientRect(); const x=e.clientX-rect.left, y=e.clientY-rect.top;
   
-  // Smart selection mode
-  if (smartSelectMode && shirtImg) {
-    smartSelect(x, y);
+  // Selection brush mode
+  if (selectionBrushMode && shirtImg) {
+    isSelecting = true;
+    lastPointerId = e.pointerId;
+    try{ c.setPointerCapture(e.pointerId); }catch(_){} 
+    doSelectionBrushStroke(e.clientX,e.clientY);
     return;
   }
   
@@ -564,7 +546,7 @@ c.addEventListener('pointerdown', e=>{
     if(Math.abs(rx) <= w/2+20 && Math.abs(ry) <= h/2+20){ dragging=true; dragOffset.x=dx; dragOffset.y=dy; c.setPointerCapture(e.pointerId); lastPointerId=e.pointerId; return; }
   }
 
-  // Start erasing/painting if eraserMode OR (paint mode)
+  // Start erasing/painting if eraserMode
   ensureEraseMaskSize(c.width,c.height);
   pushUndo();
   isErasing = true;
@@ -586,6 +568,11 @@ c.addEventListener('pointermove', e=>{
     syncUI(); draw(); return;
   }
 
+  if(isSelecting && lastPointerId === e.pointerId) {
+    doSelectionBrushStroke(e.clientX,e.clientY);
+    return;
+  }
+
   if(!isErasing || lastPointerId !== e.pointerId) return;
   doBrushStroke(e.clientX,e.clientY);
 });
@@ -596,6 +583,7 @@ c.addEventListener('pointerup', e=>{
 
   if(lastPointerId === e.pointerId){
     isErasing = false;
+    isSelecting = false;
     dragging = false;
     try{ c.releasePointerCapture(e.pointerId); }catch(_){} 
     lastPointerId = null;
@@ -603,8 +591,78 @@ c.addEventListener('pointerup', e=>{
 });
 c.addEventListener('pointercancel', e=>{
   activePointers.delete(e.pointerId);
-  isErasing = false; dragging=false; lastPointerId=null;
+  isErasing = false; 
+  isSelecting = false;
+  dragging=false; 
+  lastPointerId=null;
 });
+
+// Selection Brush drawing
+function doSelectionBrushStroke(clientX,clientY){
+  const rect=c.getBoundingClientRect(); 
+  const x=clientX-rect.left, y=clientY-rect.top;
+  const size = Number(selectionBrushSizeEl.value);
+
+  // Add to current selection
+  for (let dx = -size/2; dx <= size/2; dx++) {
+    for (let dy = -size/2; dy <= size/2; dy++) {
+      // Circular brush
+      if (Math.sqrt(dx*dx + dy*dy) <= size/2) {
+        const px = Math.round(x + dx);
+        const py = Math.round(y + dy);
+        
+        // Only add if within canvas and not already selected
+        if (px >= 0 && px < c.width && py >= 0 && py < c.height) {
+          const key = `${px},${py}`;
+          if (!currentSelection.some(([sx, sy]) => sx === px && sy === py)) {
+            currentSelection.push([px, py]);
+          }
+        }
+      }
+    }
+  }
+  
+  // Visualize selection
+  visualizeSelection();
+}
+
+// Visualize selection area
+function visualizeSelection() {
+  if (currentSelection.length === 0) {
+    selectionOverlay.style.display = 'none';
+    return;
+  }
+  
+  // Calculate bounds
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  
+  currentSelection.forEach(([x, y]) => {
+    minX = Math.min(minX, x);
+    minY = Math.min(minY, y);
+    maxX = Math.max(maxX, x);
+    maxY = Math.max(maxY, y);
+  });
+  
+  // Update overlay
+  selectionOverlay.style.left = minX + 'px';
+  selectionOverlay.style.top = minY + 'px';
+  selectionOverlay.style.width = (maxX - minX) + 'px';
+  selectionOverlay.style.height = (maxY - minY) + 'px';
+  selectionOverlay.style.display = 'block';
+  
+  drawWithSelection();
+}
+
+// Draw with selection visualization
+function drawWithSelection() {
+  draw(); // Draw normal first
+  
+  // Draw selection markers
+  ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+  currentSelection.forEach(([x, y]) => {
+    ctx.fillRect(x, y, 1, 1);
+  });
+}
 
 // Brush drawing onto eraseMask (destination-out)
 function doBrushStroke(clientX,clientY){
@@ -659,8 +717,16 @@ document.querySelectorAll('.step').forEach(btn=>{
     if(el.max !== undefined && el.max !== '') val = Math.min(Number(el.max), val);
     el.value = val;
     el.dispatchEvent(new Event('input'));
+    
+    // Update brush preview if selection brush size changed
+    if (targetId === 'selectionBrushSize') {
+      updateBrushPreview();
+    }
   });
 });
+
+// Update brush preview when slider changes
+selectionBrushSizeEl.addEventListener('input', updateBrushPreview);
 
 // center/tile/reset
 centerBtn.addEventListener('click', ()=>{ patternState.x = c.width/2; patternState.y = c.height/2; syncUI(); draw(); });
@@ -728,9 +794,14 @@ downloadBtn.addEventListener('click', ()=>{
 // helper scale lum map
 function scaleLumMap(src, sw, sh, tw, th){ if(!src) return null; const out=new Float32Array(tw*th); for(let y=0;y<th;y++) for(let x=0;x<tw;x++){ const sx=Math.floor(x*sw/tw), sy=Math.floor(y*sh/th); out[y*tw+x] = src[sy*sw + sx]; } return out; }
 
-// +/- slider keyboard-friendly: add small steps when arrow keys etc (optional)
+// Initialize
 function syncUI(){ posX.value=Math.round(patternState.x); posY.value=Math.round(patternState.y); scaleEl.value=patternState.scale; rotationEl.value=patternState.rot; opacityEl.value=patternState.alpha; }
-function init(){ ensureEraseMaskSize(c.width,c.height); syncUI(); draw(); }
+function init(){ 
+  ensureEraseMaskSize(c.width,c.height); 
+  syncUI(); 
+  updateBrushPreview();
+  draw(); 
+}
 init();
 
 </script>
