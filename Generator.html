@@ -9,7 +9,7 @@
 body{font-family:system-ui,-apple-system,Segoe UI,Roboto;display:flex;gap:16px;padding:14px;background:#f6f7fb;color:#0b0b0b}
 .panel{width:420px;background:#fff;border-radius:12px;box-shadow:0 6px 18px rgba(20,20,40,.08);padding:14px}
 .preview-wrap{flex:1;display:flex;flex-direction:column;gap:12px}
-.preview{display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#fff,#fafafa);padding:12px;border-radius:12px}
+.preview{position:relative;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#fff,#fafafa);padding:12px;border-radius:12px}
 canvas{background:#fff;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.06);max-width:100%;height:auto}
 label{display:block;font-size:13px;margin-top:10px;color:#444}
 .row{display:flex;gap:8px;align-items:center}
@@ -24,6 +24,7 @@ button{background:var(--accent);color:#fff;border:0;padding:8px 10px;border-radi
 .tool-group{margin-top:8px;padding:8px;border:1px solid #e0e0e0;border-radius:8px}
 .selection-overlay{position:absolute;pointer-events:none;border:2px dashed #ff0000;background-color:rgba(255,0,0,0.1);display:none}
 .brush-preview{width:20px;height:20px;border-radius:50%;border:1px solid #ccc;display:inline-block;vertical-align:middle;margin-left:5px}
+.tool-active{background:#111 !important}
 </style>
 </head>
 <body>
@@ -151,8 +152,7 @@ button{background:var(--accent);color:#fff;border:0;padding:8px 10px;border-radi
 </div>
 
 <script>
-/* Enhanced: AI-Assisted Selection Brush with edge detection */
-
+// AI-Assisted Selection Brush dengan edge detection
 const c = document.getElementById('c');
 const ctx = c.getContext('2d');
 const selectionOverlay = document.getElementById('selectionOverlay');
@@ -180,7 +180,6 @@ let lastPointerId = null;
 
 // Selection variables
 let currentSelection = [];
-let selectionCanvas = null;
 
 // UI refs
 const shirtFile = document.getElementById('shirtFile');
@@ -369,8 +368,8 @@ resetEraseBtn.addEventListener('click', ()=>{ pushUndo(); eraseMaskCtx.clearRect
 eraserBtn.addEventListener('click', ()=>{ 
   eraserMode = !eraserMode; 
   selectionBrushMode = false;
-  eraserBtn.style.background = eraserMode ? '#111' : '#666'; 
-  selectionBrushBtn.style.background = '#666';
+  eraserBtn.classList.toggle('tool-active', eraserMode);
+  selectionBrushBtn.classList.remove('tool-active');
   eraserBtn.textContent = eraserMode ? 'Eraser' : 'Paint'; 
   clearSelection();
 });
@@ -379,8 +378,8 @@ eraserBtn.addEventListener('click', ()=>{
 selectionBrushBtn.addEventListener('click', ()=>{ 
   selectionBrushMode = !selectionBrushMode; 
   eraserMode = false;
-  selectionBrushBtn.style.background = selectionBrushMode ? '#111' : '#666'; 
-  eraserBtn.style.background = '#666';
+  selectionBrushBtn.classList.toggle('tool-active', selectionBrushMode);
+  eraserBtn.classList.remove('tool-active');
   if (!selectionBrushMode) {
     clearSelection();
   }
@@ -749,8 +748,7 @@ resetBtn.addEventListener('click', ()=>{
   draw(); 
 });
 
-// undo & resetErase already wired
-// download logic (similar to previous version)
+// download logic
 downloadBtn.addEventListener('click', ()=>{
   if(!shirtImg && !patternImg) return;
   const scaleFactor = 2; const tmp=document.createElement('canvas'); tmp.width=c.width*scaleFactor; tmp.height=c.height*scaleFactor;
@@ -803,7 +801,6 @@ function init(){
   draw(); 
 }
 init();
-
 </script>
 </body>
 </html>
