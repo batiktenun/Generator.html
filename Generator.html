@@ -402,30 +402,28 @@ applySelectionBtn.addEventListener('click', function() {
   
   pushUndo();
   
-  // Create selection canvas
+  // Create a temporary canvas for the selection
   const selectionCanvas = document.createElement('canvas');
   selectionCanvas.width = c.width;
   selectionCanvas.height = c.height;
   const selectionCtx = selectionCanvas.getContext('2d');
   
-  // Fill selection with white
-  selectionCtx.fillStyle = 'white';
-  selectionCtx.fillRect(0, 0, selectionCanvas.width, selectionCanvas.height);
-  
-  // Apply the selection to erase mask
-  eraseMaskCtx.globalCompositeOperation = 'destination-out';
+  // Fill the selection with black (this will be used to erase)
+  selectionCtx.fillStyle = 'black';
   
   // Draw each selected pixel
-  selectionCtx.fillStyle = 'black';
   currentSelection.forEach(pixel => {
     const [x, y] = pixel.split(',').map(Number);
     selectionCtx.fillRect(x, y, 1, 1);
   });
   
+  // Apply the selection to erase mask using destination-out
+  // This will only erase the selected areas, not the entire design
+  eraseMaskCtx.globalCompositeOperation = 'destination-out';
   eraseMaskCtx.drawImage(selectionCanvas, 0, 0);
   eraseMaskCtx.globalCompositeOperation = 'source-over';
   
-  console.log('Selection applied successfully');
+  console.log('Selection applied successfully - only selected areas erased');
   
   // Clear selection and redraw
   clearSelection();
