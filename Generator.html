@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Mockup — Safe Pinch + Undo + +/- Controls + Smart Selection</title>
+<title>Mockup — Safe Pinch + Undo + +/- Controls + AI Smart Selection</title>
 <style>
 :root{--accent:#0b66ff}
 body{font-family:system-ui,-apple-system,Segoe UI,Roboto;display:flex;gap:16px;padding:14px;background:#f6f7fb;color:#0b0b0b}
@@ -22,12 +22,13 @@ button{background:var(--accent);color:#fff;border:0;padding:8px 10px;border-radi
 .badge{background:#f1f5f9;padding:6px 8px;border-radius:8px;font-size:12px}
 .footer{font-size:12px;color:#666;margin-top:12px;text-align:center}
 .tool-group{margin-top:8px;padding:8px;border:1px solid #e0e0e0;border-radius:8px}
+.selection-overlay{position:absolute;pointer-events:none;border:2px dashed #ff0000;background-color:rgba(255,0,0,0.1);display:none}
 </style>
 </head>
 <body>
 
 <div class="panel">
-  <h3>Mockup — Safe Pinch + Undo + +/- Controls + Smart Selection</h3>
+  <h3>Mockup — Safe Pinch + Undo + +/- Controls + AI Smart Selection</h3>
   <div class="small">Pinch-zoom native diperbolehkan. Eraser otomatis nonaktif saat multi-touch.</div>
 
   <label>Upload Baju (PNG transparan)</label>
@@ -89,15 +90,17 @@ button{background:var(--accent);color:#fff;border:0;padding:8px 10px;border-radi
   </div>
 
   <div class="tool-group">
-    <label style="margin-top:0">Smart Selection Tool</label>
+    <label style="margin-top:0">AI Smart Selection</label>
     <div class="toolbar">
-      <button id="smartSelectionBtn">Smart Selection</button>
-      <div class="badge">Tolerance <button class="step" data-target="tolerance" data-step="-5">−</button>
-        <input id="tolerance" type="range" min="5" max="100" value="30" style="vertical-align:middle;width:110px">
-        <button class="step" data-target="tolerance" data-step="5">+</button>
+      <button id="smartSelectBtn">AI Select</button>
+      <div class="badge">
+        Tolerance: 
+        <button class="step" data-target="selectTolerance" data-step="-5">−</button>
+        <input id="selectTolerance" type="range" min="1" max="100" value="30" style="width:80px">
+        <button class="step" data-target="selectTolerance" data-step="5">+</button>
       </div>
-      <button id="selectAllBtn" style="background:#10b981">Select All</button>
-      <button id="deselectBtn" style="background:#6b7280">Deselect</button>
+      <button id="applySelectionBtn" style="background:#10b981">Apply Selection</button>
+      <button id="clearSelectionBtn" style="background:#6b7280">Clear</button>
     </div>
   </div>
 
@@ -131,6 +134,7 @@ button{background:var(--accent);color:#fff;border:0;padding:8px 10px;border-radi
 <div class="preview-wrap">
   <div class="preview">
     <canvas id="c" width="900" height="1100" aria-label="mockup canvas"></canvas>
+    <div id="selectionOverlay" class="selection-overlay"></div>
   </div>
   <div style="display:flex;gap:12px;align-items:flex-start">
     <div><div class="small">Live Preview</div><img id="livePreview" style="width:220px;border-radius:8px;border:1px solid #eee;background:#fff;margin-top:6px"></div>
@@ -139,10 +143,11 @@ button{background:var(--accent);color:#fff;border:0;padding:8px 10px;border-radi
 </div>
 
 <script>
-/* Enhanced: Added Smart Selection Tool with color-based region detection */
+/* Enhanced: Added AI Smart Selection Tool with color-based region detection */
 
 const c = document.getElementById('c');
 const ctx = c.getContext('2d');
+const selectionOverlay = document.getElementById('selectionOverlay');
 
 let shirtImg = null, patternImg = null, maskCanvas = null, lumMap = null;
 let patternState = { x: c.width/2, y: c.height/2, scale:1, rot:0, alpha:1, tiled:false };
@@ -157,11 +162,15 @@ const UNDO_LIMIT = 20;
 const activePointers = new Set();
 
 let eraserMode = true;
-let smartSelectionMode = false;
+let smartSelectMode = false;
 let isErasing = false;
 let dragging = false;
 let dragOffset = {x:0,y:0};
 let lastPointerId = null;
+
+// Selection variables
+let currentSelection = null;
+let selectionCanvas = null;
 
 // UI refs
 const shirtFile = document.getElementById('shirtFile');
@@ -179,10 +188,10 @@ const downloadBtn = document.getElementById('downloadBtn');
 const resetBtn = document.getElementById('resetBtn');
 
 const eraserBtn = document.getElementById('eraserBtn');
-const smartSelectionBtn = document.getElementById('smartSelectionBtn');
-const selectAllBtn = document.getElementById('selectAllBtn');
-const deselectBtn = document.getElementById('deselectBtn');
-const toleranceEl = document.getElementById('tolerance');
+const smartSelectBtn = document.getElementById('smartSelectBtn');
+const applySelectionBtn = document.getElementById('applySelectionBtn');
+const clearSelectionBtn = document.getElementById('clearSelectionBtn');
+const toleranceEl = document.getElementById('selectTolerance');
 const brushSizeEl = document.getElementById('brushSize');
 const brushHardEl = document.getElementById('brushHard');
 const undoBtn = document.getElementById('undoBtn');
@@ -341,43 +350,64 @@ resetEraseBtn.addEventListener('click', ()=>{ pushUndo(); eraseMaskCtx.clearRect
 // Eraser toggle
 eraserBtn.addEventListener('click', ()=>{ 
   eraserMode = !eraserMode; 
-  smartSelectionMode = false;
+  smartSelectMode = false;
   eraserBtn.style.background = eraserMode ? '#111' : '#666'; 
-  smartSelectionBtn.style.background = '#666';
+  smartSelectBtn.style.background = '#666';
   eraserBtn.textContent = eraserMode ? 'Eraser' : 'Paint'; 
+  clearSelection();
 });
 
 // Smart Selection toggle
-smartSelectionBtn.addEventListener('click', ()=>{ 
-  smartSelectionMode = !smartSelectionMode; 
+smartSelectBtn.addEventListener('click', ()=>{ 
+  smartSelectMode = !smartSelectMode; 
   eraserMode = false;
-  smartSelectionBtn.style.background = smartSelectionMode ? '#111' : '#666'; 
+  smartSelectBtn.style.background = smartSelectMode ? '#111' : '#666'; 
   eraserBtn.style.background = '#666';
+  if (!smartSelectMode) {
+    clearSelection();
+  }
 });
 
-// Select All button
-selectAllBtn.addEventListener('click', ()=>{ 
-  pushUndo();
-  eraseMaskCtx.clearRect(0,0,eraseMask.width,eraseMask.height);
-  eraseMaskCtx.fillStyle = 'white';
-  eraseMaskCtx.fillRect(0,0,eraseMask.width,eraseMask.height);
-  draw();
+// Apply Selection button
+applySelectionBtn.addEventListener('click', function() {
+  if (currentSelection) {
+    pushUndo();
+    // Apply selection to erase mask
+    eraseMaskCtx.globalCompositeOperation = 'destination-out';
+    eraseMaskCtx.drawImage(selectionCanvas, 0, 0);
+    eraseMaskCtx.globalCompositeOperation = 'source-over';
+    
+    // Clear selection
+    clearSelection();
+    draw();
+  }
 });
 
-// Deselect button
-deselectBtn.addEventListener('click', ()=>{ 
-  pushUndo();
-  eraseMaskCtx.clearRect(0,0,eraseMask.width,eraseMask.height);
-  eraseMaskCtx.fillStyle = 'black';
-  eraseMaskCtx.fillRect(0,0,eraseMask.width,eraseMask.height);
-  draw();
-});
+// Clear Selection button
+clearSelectionBtn.addEventListener('click', clearSelection);
+
+// Canvas untuk menampilkan selection
+function initSelectionCanvas() {
+  if (!selectionCanvas) {
+    selectionCanvas = document.createElement('canvas');
+    selectionCanvas.width = c.width;
+    selectionCanvas.height = c.height;
+  }
+}
+
+function clearSelection() {
+  if (selectionCanvas) {
+    const ctx = selectionCanvas.getContext('2d');
+    ctx.clearRect(0, 0, selectionCanvas.width, selectionCanvas.height);
+  }
+  currentSelection = null;
+  selectionOverlay.style.display = 'none';
+  draw(); // Redraw tanpa selection
+}
 
 // Smart Selection function - detects similar color regions
-function smartSelection(x, y) {
+function smartSelect(x, y) {
   if (!shirtImg) return;
-  
-  pushUndo();
   
   // Get shirt image data
   const tmp = document.createElement('canvas');
@@ -399,19 +429,18 @@ function smartSelection(x, y) {
   const tolerance = Number(toleranceEl.value);
   
   // Create temporary canvas for flood fill
-  const selectionCanvas = document.createElement('canvas');
-  selectionCanvas.width = tmp.width;
-  selectionCanvas.height = tmp.height;
+  initSelectionCanvas();
   const sctx = selectionCanvas.getContext('2d');
   sctx.clearRect(0, 0, tmp.width, tmp.height);
   
   // Perform flood fill algorithm
   const stack = [[x, y]];
   const visited = new Set();
+  const selectedPixels = [];
   
   while (stack.length > 0) {
     const [cx, cy] = stack.pop();
-    const key = `${cx},${cy}`;
+    const key = `${Math.round(cx)},${Math.round(cy)}`;
     
     if (visited.has(key) || cx < 0 || cx >= tmp.width || cy < 0 || cy >= tmp.height) {
       continue;
@@ -434,9 +463,7 @@ function smartSelection(x, y) {
     
     // If similar enough, add to selection and check neighbors
     if (diff <= tolerance && a > 10) {
-      // Mark this pixel in selection
-      sctx.fillStyle = 'white';
-      sctx.fillRect(cx, cy, 1, 1);
+      selectedPixels.push([cx, cy]);
       
       // Add neighbors to stack
       stack.push([cx + 1, cy]);
@@ -446,12 +473,66 @@ function smartSelection(x, y) {
     }
   }
   
-  // Apply the selection to the erase mask
-  eraseMaskCtx.globalCompositeOperation = 'destination-out';
-  eraseMaskCtx.drawImage(selectionCanvas, 0, 0);
-  eraseMaskCtx.globalCompositeOperation = 'source-over';
+  // Visualize selection
+  visualizeSelection(selectedPixels);
+  currentSelection = selectedPixels;
+}
+
+// Visualisasi area yang terpilih
+function visualizeSelection(pixels) {
+  if (!selectionCanvas) initSelectionCanvas();
   
-  draw();
+  const ctx = selectionCanvas.getContext('2d');
+  ctx.clearRect(0, 0, selectionCanvas.width, selectionCanvas.height);
+  
+  // Gambar selection sebagai area semi-transparan
+  ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
+  
+  // Draw all selected pixels
+  pixels.forEach(([x, y]) => {
+    ctx.fillRect(x, y, 1, 1);
+  });
+  
+  // Update selection overlay
+  if (pixels.length > 0) {
+    const bounds = calculateSelectionBounds(pixels);
+    selectionOverlay.style.left = bounds.x + 'px';
+    selectionOverlay.style.top = bounds.y + 'px';
+    selectionOverlay.style.width = bounds.width + 'px';
+    selectionOverlay.style.height = bounds.height + 'px';
+    selectionOverlay.style.display = 'block';
+  }
+  
+  drawWithSelection();
+}
+
+// Calculate bounds for selection overlay
+function calculateSelectionBounds(pixels) {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  
+  pixels.forEach(([x, y]) => {
+    minX = Math.min(minX, x);
+    minY = Math.min(minY, y);
+    maxX = Math.max(maxX, x);
+    maxY = Math.max(maxY, y);
+  });
+  
+  return {
+    x: minX,
+    y: minY,
+    width: maxX - minX,
+    height: maxY - minY
+  };
+}
+
+// Draw dengan menampilkan selection
+function drawWithSelection() {
+  draw(); // Draw normal dulu
+  
+  // Overlay selection di atasnya
+  if (selectionCanvas && currentSelection) {
+    ctx.drawImage(selectionCanvas, 0, 0);
+  }
 }
 
 // pointer tracking (multi-touch safe)
@@ -469,8 +550,8 @@ c.addEventListener('pointerdown', e=>{
   const rect=c.getBoundingClientRect(); const x=e.clientX-rect.left, y=e.clientY-rect.top;
   
   // Smart selection mode
-  if (smartSelectionMode && shirtImg) {
-    smartSelection(x, y);
+  if (smartSelectMode && shirtImg) {
+    smartSelect(x, y);
     return;
   }
   
@@ -584,7 +665,23 @@ document.querySelectorAll('.step').forEach(btn=>{
 // center/tile/reset
 centerBtn.addEventListener('click', ()=>{ patternState.x = c.width/2; patternState.y = c.height/2; syncUI(); draw(); });
 tileBtn.addEventListener('click', ()=>{ patternState.tiled = !patternState.tiled; tileBtn.textContent = patternState.tiled ? 'Tile: ON' : 'Toggle Tile'; draw(); });
-resetBtn.addEventListener('click', ()=>{ shirtImg=null; patternImg=null; maskCanvas=null; lumMap=null; patternState={x:c.width/2,y:c.height/2,scale:1,rot:0,alpha:1,tiled:false}; eraseMaskCtx.clearRect(0,0,eraseMask.width,eraseMask.height); eraseMaskCtx.fillStyle='white'; eraseMaskCtx.fillRect(0,0,eraseMask.width,eraseMask.height); undoStack.length=0; undoBtn.disabled=true; document.getElementById('shirtFile').value=''; document.getElementById('patternFile').value=''; syncUI(); draw(); });
+resetBtn.addEventListener('click', ()=>{ 
+  shirtImg=null; 
+  patternImg=null; 
+  maskCanvas=null; 
+  lumMap=null; 
+  patternState={x:c.width/2,y:c.height/2,scale:1,rot:0,alpha:1,tiled:false}; 
+  eraseMaskCtx.clearRect(0,0,eraseMask.width,eraseMask.height); 
+  eraseMaskCtx.fillStyle='white'; 
+  eraseMaskCtx.fillRect(0,0,eraseMask.width,eraseMask.height); 
+  undoStack.length=0; 
+  undoBtn.disabled=true; 
+  document.getElementById('shirtFile').value=''; 
+  document.getElementById('patternFile').value=''; 
+  clearSelection();
+  syncUI(); 
+  draw(); 
+});
 
 // undo & resetErase already wired
 // download logic (similar to previous version)
